@@ -1,854 +1,709 @@
 import React, { useMemo, useState } from "react";
 import {
+  ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  Search,
-  RotateCcw,
-  Layers3,
-  MessageSquareMore,
+  Check,
   Sparkles,
-  Compass,
   Workflow,
+  Compass,
   Library,
   Users,
   Target,
-  PanelLeft,
-  Home,
-  FolderKanban,
-  CheckSquare,
-  BookOpen,
-  Settings,
 } from "lucide-react";
 
-const discussionTree = [
+const styles = {
+  bg: "#F2F1F4",
+  card: "#FFFFFF",
+  ink: "#120F0D",
+  muted: "#60606B",
+  border: "#D9D8DE",
+  purple: "#6D39F8",
+  purpleSoft: "#ECE8FF",
+  lime: "#D6EA8A",
+  chipBg: "#FAFAFC",
+};
+
+const ROUTES = {
+  CONTENT: ["finding_content", "starting_from_scratch", "version_control"],
+  SME: ["sme_delays"],
+  REVIEW: ["review_comments", "ownership_coordination"],
+  COMPLIANCE: ["requirement_tracking"],
+  PRODUCTION: ["formatting_final_assembly"],
+  RFI: ["rfi_questionnaires"],
+};
+
+function otherField(key, label = "Add detail (optional)") {
+  return { key, label, placeholder: "Type here..." };
+}
+
+const questions = [
   {
-    id: "opportunity-intake",
-    title: "Opportunity Intake & Workflow Reality",
-    eyebrow: "Section 01",
+    id: "company_name",
+    type: "text",
+    title: "What should we call your team or company?",
+    helper: "Optional, but helpful for tailoring your session.",
+    optional: true,
+    placeholder: "Type your company or team name",
+    icon: Sparkles,
+  },
+  {
+    id: "work_type",
+    type: "single",
+    title: "What type of work do you primarily produce?",
     icon: Workflow,
-    blurb:
-      "Start here to understand what really happens when a new opportunity appears, how work gets kicked off, and where the current process is structured versus improvised.",
-    children: [
-      {
-        id: "intake-openers",
-        title: "Primary opener",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "intake-opener-main",
-            title: "Core discussion question",
-            levelLabel: "Level 3",
-            questions: [
-              "Walk me through what actually happens when a new opportunity comes in.",
-            ],
-          },
-        ],
-      },
-      {
-        id: "intake-process-path",
-        title: "Process path and kickoff",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "intake-process-who",
-            title: "Who sees it first and what happens next",
-            levelLabel: "Level 3",
-            questions: [
-              "Who usually becomes aware of the opportunity first, and what happens next?",
-              "What are the first two or three steps your team takes once you decide it is worth pursuing?",
-            ],
-          },
-          {
-            id: "intake-process-structure",
-            title: "Where the process is structured versus informal",
-            levelLabel: "Level 3",
-            questions: [
-              "Where does the process feel well defined versus more informal or person-dependent?",
-              "How much of the workflow is documented versus simply known by the team?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "intake-variation",
-        title: "Variation by bid type and timing",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "intake-variation-types",
-            title: "Different response types",
-            levelLabel: "Level 3",
-            questions: [
-              "What kinds of responses are you producing most often right now: full proposals, RFIs, questionnaires, task orders, grants, or a mix?",
-              "Which of those feel most repeatable, and which feel the most bespoke?",
-            ],
-          },
-          {
-            id: "intake-variation-timeline",
-            title: "Timeline pressure",
-            levelLabel: "Level 3",
-            questions: [
-              "What does a normal turnaround timeline look like for your team?",
-              "When timelines get compressed, what gets skipped, rushed, or handled differently?",
-            ],
-          },
-        ],
-      },
+    options: [
+      { value: "federal", label: "Federal / government proposals" },
+      { value: "commercial", label: "Commercial / B2B proposals" },
+      { value: "rfi_questionnaires", label: "RFIs / questionnaires / DDQs" },
+      { value: "grants", label: "Grants / funding applications" },
+      { value: "mixed", label: "A mix of the above" },
     ],
   },
   {
-    id: "friction-bottlenecks",
-    title: "Friction, Bottlenecks & Manual Pain",
-    eyebrow: "Section 02",
-    icon: Compass,
-    blurb:
-      "Use this branch to identify where the process slows down, where the team gets stuck, and which manual steps create the most drag.",
-    children: [
-      {
-        id: "friction-openers",
-        title: "Primary opener",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "friction-opener-main",
-            title: "Core discussion question",
-            levelLabel: "Level 3",
-            questions: [
-              "Where do things usually slow down or get frustrating for your team?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "friction-general",
-        title: "General friction signals",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "friction-general-rework",
-            title: "Rework and manual overhead",
-            levelLabel: "Level 3",
-            questions: [
-              "Which step tends to create the most rework or repeated effort?",
-              "What creates the most mental overhead for the people doing the work?",
-              "Which part of the process feels heavier than it should be for the value it adds?",
-            ],
-          },
-          {
-            id: "friction-general-handoffs",
-            title: "Broken handoffs",
-            levelLabel: "Level 3",
-            questions: [
-              "Where do handoffs break down most often?",
-              "What tends to get lost or delayed when work moves from one person or team to another?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "friction-specific-areas",
-        title: "Specific pain areas",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "friction-review-cycles",
-            title: "Review cycle friction",
-            levelLabel: "Level 3",
-            questions: [
-              "How do review comments usually come back today?",
-              "What is difficult about consolidating comments or deciding what to accept?",
-              "How often do you end up with conflicting feedback from different reviewers?",
-            ],
-          },
-          {
-            id: "friction-sme-bottlenecks",
-            title: "SME bottlenecks",
-            levelLabel: "Level 3",
-            questions: [
-              "How easy or difficult is it to get timely input from SMEs?",
-              "What kind of input do SMEs tend to provide: full drafts, rough notes, verbal guidance, or edits to existing content?",
-              "If SME input arrives late, what downstream impact does that usually create?",
-            ],
-          },
-          {
-            id: "friction-compliance-tracking",
-            title: "Compliance and requirement tracking",
-            levelLabel: "Level 3",
-            questions: [
-              "How do you currently identify and track requirements that must be answered?",
-              "Where does compliance checking feel strongest today, and where does it still feel risky?",
-              "How much manual work goes into requirement extraction, matrices, or final checks?",
-            ],
-          },
-        ],
-      },
+    id: "process_structure",
+    type: "single",
+    title: "How would you describe your current process?",
+    icon: Workflow,
+    options: [
+      { value: "highly_structured", label: "Highly structured and repeatable" },
+      { value: "somewhat_structured", label: "Somewhat structured, but varies" },
+      { value: "mostly_adhoc", label: "Mostly ad hoc" },
+      { value: "depends", label: "It depends on the opportunity" },
     ],
   },
   {
-    id: "content-library",
-    title: "Content Reuse, Library & Source of Truth",
-    eyebrow: "Section 03",
-    icon: Library,
-    blurb:
-      "Use this branch to understand how the team reuses prior material, how content is organised, and whether people trust what they find.",
-    children: [
-      {
-        id: "content-openers",
-        title: "Primary opener",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "content-opener-main",
-            title: "Core discussion question",
-            levelLabel: "Level 3",
-            questions: [
-              "How are you currently reusing content from past proposals?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "content-findability",
-        title: "Finding and trusting source material",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "content-findability-location",
-            title: "Where content lives",
-            levelLabel: "Level 3",
-            questions: [
-              "Where does your best source content live today?",
-              "How easy is it for the team to find the right version of something when they need it?",
-            ],
-          },
-          {
-            id: "content-findability-confidence",
-            title: "Confidence in what is found",
-            levelLabel: "Level 3",
-            questions: [
-              "How much confidence do people have that the content they find is current and approved?",
-              "How much of the team’s time goes into finding content versus tailoring it?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "content-operations",
-        title: "Content operations and maintenance",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "content-operations-structure",
-            title: "Organisation and maintenance",
-            levelLabel: "Level 3",
-            questions: [
-              "Is your content organised mainly by folders, metadata, naming conventions, or a mix?",
-              "Who maintains the content structure or decides what should be kept as source material?",
-              "What kinds of duplicates, outdated material, or competing versions tend to build up over time?",
-            ],
-          },
-          {
-            id: "content-operations-evidence",
-            title: "Evidence and past performance",
-            levelLabel: "Level 3",
-            questions: [
-              "How are case studies, past performance examples, or proof points maintained today?",
-              "What is the current process for updating those examples when new work is completed?",
-              "Where do teams struggle most when trying to match the right example to the right opportunity?",
-            ],
-          },
-          {
-            id: "content-operations-templates",
-            title: "Templates and outputs",
-            levelLabel: "Level 3",
-            questions: [
-              "How are templates managed today for proposals, RFIs, or review artifacts?",
-              "Where do formatting requirements create extra manual work?",
-              "Which output or document production steps feel more manual than they should?",
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "roles-collaboration",
-    title: "Roles, Collaboration & Review Handoffs",
-    eyebrow: "Section 04",
-    icon: Users,
-    blurb:
-      "Use this branch to understand who writes, who reviews, who approves, and how work moves between those people.",
-    children: [
-      {
-        id: "roles-openers",
-        title: "Primary opener",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "roles-opener-main",
-            title: "Core discussion question",
-            levelLabel: "Level 3",
-            questions: [
-              "Who actually writes vs reviews vs approves, and how does that handoff work?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "roles-ownership",
-        title: "Ownership and working model",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "roles-ownership-coordination",
-            title: "Coordination and accountability",
-            levelLabel: "Level 3",
-            questions: [
-              "Who is typically responsible for coordinating the overall response?",
-              "How does the team know who owes what by when?",
-              "What happens when one person becomes the bottleneck?",
-            ],
-          },
-          {
-            id: "roles-ownership-writing-model",
-            title: "Writer-led versus SME-led model",
-            levelLabel: "Level 3",
-            questions: [
-              "Would you describe your model as writer-led, SME-led, or more distributed?",
-              "How much does final quality depend on a small number of individuals?",
-              "If a key person were unavailable for a week, what part of the process would feel most exposed?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "roles-reviews-adoption",
-        title: "Review loops and adoption reality",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "roles-reviews-design",
-            title: "Review design",
-            levelLabel: "Level 3",
-            questions: [
-              "Do you run structured review stages or more ad hoc review loops?",
-              "How do you prepare reviewers so they know what they are meant to focus on?",
-              "How do you close the loop after review and confirm what changed?",
-            ],
-          },
-          {
-            id: "roles-reviews-adoption-branch",
-            title: "Change readiness",
-            levelLabel: "Level 3",
-            questions: [
-              "Which parts of the team are most open to changing the current process, and which parts are more hesitant?",
-              "Where would a new workflow need to fit around existing habits rather than replace them?",
-              "What kind of support would make adoption feel realistic rather than burdensome?",
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "priorities-outcomes",
-    title: "Priorities, Success Criteria & Next-Step Focus",
-    eyebrow: "Section 05",
+    id: "top_outcomes",
+    type: "multi",
+    title: "What matters most right now?",
+    helper: "Choose up to 2.",
     icon: Target,
-    blurb:
-      "Use this branch to force prioritisation, identify the most valuable near-term improvement, and shape what the workshop or ALP should focus on first.",
-    children: [
-      {
-        id: "priority-openers",
-        title: "Primary opener",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "priority-opener-main",
-            title: "Core discussion question",
-            levelLabel: "Level 3",
-            questions: [
-              "If we could fix one thing in the next 60 to 90 days, what would make the biggest difference?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "priority-success",
-        title: "What success would look like",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "priority-success-definition",
-            title: "Success definition",
-            levelLabel: "Level 3",
-            questions: [
-              "Why is that the highest priority right now?",
-              "What would success look like in practical terms for the team?",
-              "How would you know this issue is actually improving?",
-            ],
-          },
-          {
-            id: "priority-success-boundaries",
-            title: "What not to change yet",
-            levelLabel: "Level 3",
-            questions: [
-              "If we focused there first, what downstream benefits would you expect to see?",
-              "What should we not try to change yet because it is working well enough today?",
-            ],
-          },
-        ],
-      },
-      {
-        id: "priority-branches",
-        title: "Priority-specific branches",
-        levelLabel: "Level 2",
-        children: [
-          {
-            id: "priority-branches-speed",
-            title: "If the priority is speed",
-            levelLabel: "Level 3",
-            questions: [
-              "Which specific part of the timeline do you most want to compress?",
-              "What currently prevents you from getting to a strong first draft faster?",
-              "Where would faster output help most: intake, drafting, review, or finalisation?",
-            ],
-          },
-          {
-            id: "priority-branches-quality",
-            title: "If the priority is quality",
-            levelLabel: "Level 3",
-            questions: [
-              "Where does quality feel inconsistent today?",
-              "Is the bigger issue structure, tone, evidence, compliance, or review rigor?",
-              "What kind of quality improvement would matter most to leadership or the bid team?",
-            ],
-          },
-          {
-            id: "priority-branches-enablement",
-            title: "If the priority is adoption or enablement",
-            levelLabel: "Level 3",
-            questions: [
-              "What does the team need more of right now: process clarity, hands-on training, better prompts, or better source material?",
-              "Which user group would benefit most from targeted enablement first?",
-              "What would make the next training or workshop feel immediately useful rather than theoretical?",
-            ],
-          },
-        ],
-      },
+    max: 2,
+    options: [
+      { value: "speed", label: "Faster turnaround" },
+      { value: "quality", label: "Better quality" },
+      { value: "compliance", label: "Better compliance" },
+      { value: "teamwork", label: "Better teamwork and review flow" },
+      { value: "reuse", label: "Better reuse of content" },
+      { value: "enablement", label: "Better onboarding / enablement" },
+      { value: "other", label: "Other" },
     ],
+    other: otherField("top_outcomes_other"),
+  },
+  {
+    id: "writing_model",
+    type: "single",
+    title: "How does most of the writing happen today?",
+    icon: Users,
+    options: [
+      { value: "dedicated_writers", label: "Dedicated writers draft most content" },
+      { value: "smes_write_edit", label: "SMEs draft and someone edits" },
+      { value: "distributed", label: "Writing is distributed across the team" },
+      { value: "varies", label: "It varies" },
+    ],
+  },
+  {
+    id: "new_opportunity",
+    type: "single",
+    title: "What usually happens when a new opportunity comes in?",
+    icon: Workflow,
+    options: [
+      { value: "formal_kickoff", label: "There is a formal intake or kickoff" },
+      { value: "informal_coordination", label: "There is an informal review and someone starts organizing" },
+      { value: "one_person_drives", label: "One person usually picks it up and gets going" },
+      { value: "varies", label: "It varies case by case" },
+    ],
+  },
+  {
+    id: "workflow_defined",
+    type: "multi",
+    title: "Which parts of your workflow feel well defined?",
+    helper: "Choose all that apply.",
+    icon: Workflow,
+    options: [
+      { value: "intake", label: "Intake / kickoff" },
+      { value: "requirements", label: "Requirement review" },
+      { value: "drafting", label: "Drafting" },
+      { value: "sme_input", label: "SME input" },
+      { value: "review_cycles", label: "Review cycles" },
+      { value: "final_production", label: "Final production" },
+      { value: "post_submission", label: "Post-submission review" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("workflow_defined_other"),
+  },
+  {
+    id: "friction_points",
+    type: "multi",
+    title: "Where do you feel the most friction today?",
+    helper: "Choose up to 4.",
+    icon: Compass,
+    max: 4,
+    options: [
+      { value: "finding_content", label: "Finding the right content" },
+      { value: "starting_from_scratch", label: "Starting from scratch" },
+      { value: "sme_delays", label: "SME delays" },
+      { value: "review_comments", label: "Review comments" },
+      { value: "requirement_tracking", label: "Requirement tracking" },
+      { value: "formatting_final_assembly", label: "Formatting / final assembly" },
+      { value: "version_control", label: "Version control" },
+      { value: "ownership_coordination", label: "Ownership / coordination" },
+      { value: "training_onboarding", label: "Training / onboarding" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("friction_points_other"),
+  },
+  {
+    id: "urgent_issue",
+    type: "derived-single",
+    title: "Which of these is the most urgent to improve?",
+    icon: Compass,
+    deriveFrom: "friction_points",
+  },
+  {
+    id: "content_location",
+    branch: "content",
+    type: "single",
+    title: "Where does your content live today?",
+    icon: Library,
+    options: [
+      { value: "sharepoint", label: "SharePoint" },
+      { value: "google_drive", label: "Google Drive" },
+      { value: "shared_folders", label: "Shared folders" },
+      { value: "multiple_places", label: "Multiple places" },
+      { value: "no_clear_source", label: "No clear source of truth" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("content_location_other"),
+  },
+  {
+    id: "content_findability",
+    branch: "content",
+    type: "single",
+    title: "How easy is it to find the right version of content?",
+    icon: Library,
+    options: [
+      { value: "easy", label: "Very easy" },
+      { value: "manageable", label: "Usually manageable" },
+      { value: "difficult", label: "Often difficult" },
+      { value: "very_difficult", label: "Very difficult" },
+    ],
+  },
+  {
+    id: "sme_input_type",
+    branch: "sme",
+    type: "multi",
+    title: "How do SMEs usually provide input?",
+    helper: "Choose all that apply.",
+    icon: Users,
+    options: [
+      { value: "draft_text", label: "Draft text" },
+      { value: "comments", label: "Comments" },
+      { value: "bullet_points", label: "Bullet points" },
+      { value: "verbal", label: "Verbal explanation" },
+      { value: "meetings", label: "Meetings / interviews" },
+      { value: "inconsistent", label: "It varies widely" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("sme_input_type_other"),
+  },
+  {
+    id: "sme_input_late",
+    branch: "sme",
+    type: "single",
+    title: "What usually happens when SME input is late?",
+    icon: Users,
+    options: [
+      { value: "delays_everything", label: "It delays the whole process" },
+      { value: "someone_fills_gap", label: "Someone else fills the gap" },
+      { value: "quality_drops", label: "Quality drops" },
+      { value: "workarounds", label: "We work around it as best we can" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("sme_input_late_other"),
+  },
+  {
+    id: "review_challenges",
+    branch: "review",
+    type: "multi",
+    title: "What’s hardest about reviews?",
+    helper: "Choose up to 2.",
+    icon: Users,
+    max: 2,
+    options: [
+      { value: "too_many_comments", label: "Too many comments" },
+      { value: "conflicting_feedback", label: "Conflicting feedback" },
+      { value: "slow_turnaround", label: "Slow reviewer turnaround" },
+      { value: "hard_to_decide", label: "Hard to decide what to accept" },
+      { value: "tracking_status", label: "Tracking status" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("review_challenges_other"),
+  },
+  {
+    id: "requirement_method",
+    branch: "compliance",
+    type: "single",
+    title: "How do you currently identify requirements that must be answered?",
+    icon: Target,
+    options: [
+      { value: "formal_matrix", label: "Formal compliance matrix or equivalent" },
+      { value: "manual_review", label: "Manual review of the source document" },
+      { value: "mixed", label: "A mix of both" },
+      { value: "no_consistent_method", label: "No consistent method" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("requirement_method_other"),
+  },
+  {
+    id: "compliance_confidence",
+    branch: "compliance",
+    type: "single",
+    title: "How confident are you that requirements are fully tracked today?",
+    icon: Target,
+    options: [
+      { value: "very_confident", label: "Very confident" },
+      { value: "mostly_confident", label: "Mostly confident" },
+      { value: "somewhat_confident", label: "Somewhat confident" },
+      { value: "not_confident", label: "Not confident" },
+    ],
+  },
+  {
+    id: "production_manual_steps",
+    branch: "production",
+    type: "multi",
+    title: "Which final production steps feel more manual than they should?",
+    helper: "Choose all that apply.",
+    icon: Workflow,
+    options: [
+      { value: "template_setup", label: "Template setup" },
+      { value: "formatting", label: "Formatting" },
+      { value: "copy_paste", label: "Copy/paste into final docs" },
+      { value: "portal_entry", label: "Portal entry" },
+      { value: "packaging", label: "Final packaging" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("production_manual_steps_other"),
+  },
+  {
+    id: "rfi_hardest",
+    branch: "rfi",
+    type: "multi",
+    title: "What’s hardest about those workflows?",
+    helper: "Choose up to 2.",
+    icon: Workflow,
+    max: 2,
+    options: [
+      { value: "finding_answers", label: "Finding answers quickly" },
+      { value: "consistency", label: "Maintaining consistency across answers" },
+      { value: "format_limits", label: "Character or format limits" },
+      { value: "reviewer_delays", label: "Reviewer delays" },
+      { value: "reuse", label: "Reuse of prior responses" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("rfi_hardest_other"),
+  },
+  {
+    id: "support_needs",
+    type: "multi",
+    title: "What would help your team most right now?",
+    helper: "Choose up to 2.",
+    icon: Target,
+    max: 2,
+    options: [
+      { value: "clearer_workflow", label: "A clearer overall workflow" },
+      { value: "content_org", label: "Better content organization" },
+      { value: "platform_usage", label: "Better use of the platform" },
+      { value: "collaboration", label: "Better collaboration and review flow" },
+      { value: "compliance_support", label: "Better compliance support" },
+      { value: "prompts", label: "Better prompts or examples" },
+      { value: "training", label: "Better training for different roles" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("support_needs_other"),
+  },
+  {
+    id: "change_readiness",
+    type: "single",
+    title: "How ready is your team to adopt changes?",
+    icon: Users,
+    options: [
+      { value: "very_ready", label: "Very ready" },
+      { value: "cautious", label: "Open, but cautious" },
+      { value: "mixed", label: "Mixed" },
+      { value: "resistant", label: "Change-resistant" },
+    ],
+  },
+  {
+    id: "success_60_90",
+    type: "text",
+    title: "If this goes well, what should feel better in 60–90 days?",
+    helper: "Optional.",
+    optional: true,
+    placeholder: "Add detail (optional)",
+    icon: Sparkles,
   },
 ];
 
-const platformNav = [
-  { id: "home", label: "Home", icon: Home, active: true },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "assigned", label: "Assigned", icon: CheckSquare },
-  { id: "library", label: "Library", icon: BookOpen },
-  { id: "settings", label: "Settings", icon: Settings },
-];
+function getVisibleQuestions(answers) {
+  const visible = [];
+  const friction = answers.friction_points || [];
+  const workType = answers.work_type;
 
-function collectIds(nodes) {
-  const ids = [];
-  for (const node of nodes) {
-    ids.push(node.id);
-    if (node.children) ids.push(...collectIds(node.children));
+  for (const q of questions) {
+    if (!q.branch) {
+      visible.push(q);
+      continue;
+    }
+
+    if (q.branch === "content" && friction.some((x) => ROUTES.CONTENT.includes(x))) visible.push(q);
+    if (q.branch === "sme" && friction.some((x) => ROUTES.SME.includes(x))) visible.push(q);
+    if (q.branch === "review" && friction.some((x) => ROUTES.REVIEW.includes(x))) visible.push(q);
+    if (q.branch === "compliance" && (friction.some((x) => ROUTES.COMPLIANCE.includes(x)) || ["federal", "grants", "mixed"].includes(workType))) visible.push(q);
+    if (q.branch === "production" && (friction.some((x) => ROUTES.PRODUCTION.includes(x)) || answers.top_outcomes?.includes("speed"))) visible.push(q);
+    if (q.branch === "rfi" && ["rfi_questionnaires", "mixed"].includes(workType)) visible.push(q);
   }
-  return ids;
+
+  return visible;
 }
 
-function filterTree(nodes, query) {
-  if (!query.trim()) return nodes;
-  const q = query.toLowerCase();
-
-  return nodes
-    .map((node) => {
-      const titleMatch = node.title.toLowerCase().includes(q);
-      const eyebrowMatch = node.eyebrow?.toLowerCase().includes(q);
-      const blurbMatch = node.blurb?.toLowerCase().includes(q);
-      const levelLabelMatch = node.levelLabel?.toLowerCase().includes(q);
-      const questionMatch = (node.questions || []).some((question) =>
-        question.toLowerCase().includes(q)
-      );
-      const filteredChildren = node.children ? filterTree(node.children, query) : [];
-
-      if (
-        titleMatch ||
-        eyebrowMatch ||
-        blurbMatch ||
-        levelLabelMatch ||
-        questionMatch ||
-        filteredChildren.length
-      ) {
-        return { ...node, children: filteredChildren };
-      }
-
-      return null;
-    })
-    .filter(Boolean);
+function getUrgentOptions(answers) {
+  const selected = answers.friction_points || [];
+  const optionMap = Object.fromEntries(
+    (questions.find((q) => q.id === "friction_points")?.options || []).map((opt) => [opt.value, opt.label])
+  );
+  return selected
+    .filter((x) => x !== "other")
+    .map((value) => ({ value, label: optionMap[value] || value }));
 }
 
-function getQuestionCount(nodes) {
-  let total = 0;
-  for (const node of nodes) {
-    total += (node.questions || []).length;
-    if (node.children) total += getQuestionCount(node.children);
-  }
-  return total;
+function isAnswered(question, answers) {
+  const value = answers[question.id];
+  if (question.type === "text") return question.optional ? true : Boolean(value?.trim());
+  if (question.type === "single") return Boolean(value);
+  if (question.type === "derived-single") return Boolean(value);
+  if (question.type === "multi") return Array.isArray(value) && value.length > 0;
+  return false;
 }
 
-function getBranchCount(nodes) {
-  let total = 0;
-  for (const node of nodes) {
-    if (node.children?.length) total += node.children.length;
-    if (node.children) total += getBranchCount(node.children);
-  }
-  return total;
+function shouldShowOtherField(question, answers) {
+  if (!question.other) return false;
+  const value = answers[question.id];
+  if (Array.isArray(value)) return value.includes("other");
+  return value === "other";
 }
 
-function classNames(...items) {
-  return items.filter(Boolean).join(" ");
+function cardClass(selected) {
+  return selected
+    ? "border-[#6D39F8] bg-[#ECE8FF] text-[#120F0D] shadow-sm"
+    : "border-[#D9D8DE] bg-white text-[#120F0D] hover:border-[#BDBBC7] hover:bg-[#FAFAFC]";
 }
 
-function TreeNode({ node, expanded, onToggle, depth = 0, activeId, setActiveId }) {
-  const isExpanded = expanded.has(node.id);
-  const hasChildren = Boolean(node.children && node.children.length > 0);
-  const hasQuestions = Boolean(node.questions && node.questions.length > 0);
-  const isTopLevel = depth === 0;
-  const Icon = node.icon;
-
+function ProgressBar({ current, total }) {
+  const pct = Math.max(6, Math.round((current / total) * 100));
   return (
-    <div className="w-full">
-      <div
-        className={classNames(
-          "group rounded-[22px] border transition-all duration-200",
-          isTopLevel
-            ? "border-[#D8D8DC] bg-white shadow-[0_14px_40px_-26px_rgba(18,15,13,0.4)]"
-            : "border-[#E7E7EC] bg-white shadow-sm",
-          activeId === node.id ? "ring-2 ring-[#6D39F8]/10" : ""
-        )}
-        style={{ marginLeft: depth * 16 }}
-      >
-        <div className="p-4 md:p-5">
-          <div className="flex items-start gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (hasChildren) onToggle(node.id);
-                setActiveId(node.id);
-              }}
-              className={classNames(
-                "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border transition",
-                hasChildren
-                  ? "border-[#D8D8DC] bg-[#F7F7FA] text-[#5A5A63] hover:bg-[#EFEFF5]"
-                  : "border-[#ECECF1] bg-[#FAFAFC] text-[#8B8B95]"
-              )}
-              aria-label={hasChildren ? (isExpanded ? "Collapse section" : "Expand section") : "Section"}
-            >
-              {hasChildren ? (
-                isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
-              ) : (
-                <MessageSquareMore className="h-4 w-4" />
-              )}
-            </button>
+    <div className="mb-8">
+      <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#60606B]">
+        <span>Progress</span>
+        <span>{current} of {total}</span>
+      </div>
+      <div className="h-2 rounded-full bg-[#E7E7EC]">
+        <div
+          className="h-2 rounded-full bg-[#6D39F8] transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                {node.eyebrow && (
-                  <span className="rounded-full bg-[#ECE8FF] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6D39F8]">
-                    {node.eyebrow}
-                  </span>
-                )}
-                {node.levelLabel && (
-                  <span className="rounded-full bg-[#F3F3F6] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#75757F]">
-                    {node.levelLabel}
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-2 flex items-start gap-3">
-                {Icon && isTopLevel ? (
-                  <div className="mt-0.5 rounded-2xl bg-[#D6EA8A] p-2 text-[#120F0D] shadow-sm">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                ) : null}
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3
-                      className={classNames(
-                        "tracking-tight text-[#120F0D]",
-                        isTopLevel ? "text-lg font-semibold md:text-[1.28rem]" : "text-sm font-semibold md:text-base"
-                      )}
-                    >
-                      {node.title}
-                    </h3>
-                    {hasQuestions && (
-                      <span className="rounded-full bg-[#F3F3F6] px-2.5 py-1 text-xs text-[#60606B]">
-                        {node.questions.length} question{node.questions.length > 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {hasChildren && (
-                      <span className="rounded-full bg-[#F3F3F6] px-2.5 py-1 text-xs text-[#60606B]">
-                        {node.children.length} branch{node.children.length > 1 ? "es" : ""}
-                      </span>
-                    )}
-                  </div>
-
-                  {node.blurb && (
-                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[#60606B] md:text-[15px]">
-                      {node.blurb}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {hasQuestions && (
-            <div className="mt-4 space-y-3">
-              {node.questions.map((question, index) => (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] px-4 py-3 text-sm leading-6 text-[#27272F] shadow-sm"
-                >
-                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8B8B95]">
-                    Discussion question
-                  </div>
-                  {question}
-                </div>
-              ))}
-            </div>
-          )}
+function OptionCard({ label, selected, onClick, multi }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm font-medium leading-6">{label}</div>
+        <div
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+            selected ? "border-[#6D39F8] bg-[#6D39F8] text-white" : "border-[#C9C8D1] bg-white text-transparent"
+          }`}
+        >
+          <Check className="h-3 w-3" />
         </div>
       </div>
+      <div className="mt-2 text-xs text-[#60606B]">{multi ? "Tap to add or remove" : "Tap to select"}</div>
+    </button>
+  );
+}
 
-      {hasChildren && isExpanded && (
-        <div className="mt-3 space-y-3">
-          {node.children.map((child) => (
-            <TreeNode
-              key={child.id}
-              node={child}
-              expanded={expanded}
-              onToggle={onToggle}
-              depth={depth + 1}
-              activeId={activeId}
-              setActiveId={setActiveId}
+function QuestionRenderer({ question, answers, setAnswer }) {
+  const Icon = question.icon || Sparkles;
+
+  const options = useMemo(() => {
+    if (question.type === "derived-single") return getUrgentOptions(answers);
+    return question.options || [];
+  }, [question, answers]);
+
+  const value = answers[question.id] || (question.type === "multi" ? [] : "");
+
+  return (
+    <div className="rounded-[28px] border border-[#D9D8DE] bg-white p-6 shadow-sm md:p-8">
+      <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+        <Icon className="h-3.5 w-3.5" />
+        Pre-Workshop Diagnostic
+      </div>
+
+      <h2 className="text-2xl font-semibold tracking-tight text-[#120F0D] md:text-[2rem]">{question.title}</h2>
+      {question.helper && <p className="mt-3 text-sm leading-6 text-[#60606B]">{question.helper}</p>}
+
+      {question.type === "text" && (
+        <div className="mt-6">
+          <input
+            value={value}
+            onChange={(e) => setAnswer(question.id, e.target.value)}
+            placeholder={question.placeholder || "Type here..."}
+            className="w-full rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+          />
+        </div>
+      )}
+
+      {(question.type === "single" || question.type === "derived-single") && (
+        <div className="mt-6 grid gap-3">
+          {options.map((option) => (
+            <OptionCard
+              key={option.value}
+              label={option.label}
+              selected={value === option.value}
+              onClick={() => setAnswer(question.id, option.value)}
+              multi={false}
             />
           ))}
+          {shouldShowOtherField(question, answers) && (
+            <input
+              value={answers[question.other.key] || ""}
+              onChange={(e) => setAnswer(question.other.key, e.target.value)}
+              placeholder={question.other.placeholder}
+              className="rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+            />
+          )}
+        </div>
+      )}
+
+      {question.type === "multi" && (
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          {options.map((option) => {
+            const selected = value.includes(option.value);
+            const atLimit = question.max && value.length >= question.max && !selected;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={atLimit}
+                onClick={() => {
+                  const next = selected
+                    ? value.filter((x) => x !== option.value)
+                    : [...value, option.value];
+                  setAnswer(question.id, next);
+                }}
+                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${atLimit ? "cursor-not-allowed opacity-45" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-medium leading-6">{option.label}</div>
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      selected ? "border-[#6D39F8] bg-[#6D39F8] text-white" : "border-[#C9C8D1] bg-white text-transparent"
+                    }`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+          {shouldShowOtherField(question, answers) && (
+            <div className="md:col-span-2">
+              <input
+                value={answers[question.other.key] || ""}
+                onChange={(e) => setAnswer(question.other.key, e.target.value)}
+                placeholder={question.other.placeholder}
+                className="w-full rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export default function CSMDiscussionGuide() {
-  const [query, setQuery] = useState("");
-  const [activeId, setActiveId] = useState(discussionTree[0].id);
-  const [expanded, setExpanded] = useState(() => new Set(discussionTree.map((section) => section.id)));
+function formatValue(question, answers) {
+  const value = answers[question.id];
+  if (!value || (Array.isArray(value) && value.length === 0)) return "—";
 
-  const filteredTree = useMemo(() => filterTree(discussionTree, query), [query]);
-  const allFilteredIds = useMemo(() => collectIds(filteredTree), [filteredTree]);
-  const topLevelIds = useMemo(() => filteredTree.map((section) => section.id), [filteredTree]);
+  const optionMap = Object.fromEntries((question.options || []).map((opt) => [opt.value, opt.label]));
 
-  const toggle = (id) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  if (Array.isArray(value)) {
+    const labels = value.map((v) => {
+      if (v === "other" && question.other) {
+        const otherText = answers[question.other.key]?.trim();
+        return otherText ? `Other: ${otherText}` : "Other";
+      }
+      return optionMap[v] || v;
     });
+    return labels.join(", ");
+  }
+
+  if (value === "other" && question.other) {
+    const otherText = answers[question.other.key]?.trim();
+    return otherText ? `Other: ${otherText}` : "Other";
+  }
+
+  return optionMap[value] || value;
+}
+
+function getEmailPreview(visibleQuestions, answers) {
+  return visibleQuestions
+    .map((q) => `${q.title}
+${formatValue(q, answers)}`)
+    .join("
+
+");
+}
+
+export default function CSMDiscussionGuide() {
+  const [answers, setAnswers] = useState({});
+  const [guidedMode, setGuidedMode] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+
+  const visibleQuestions = useMemo(() => getVisibleQuestions(answers), [answers]);
+  const currentQuestion = visibleQuestions[currentIndex];
+  const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
+
+  const setAnswer = (key, value) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
-  const expandAll = () => setExpanded(new Set(allFilteredIds));
-  const collapseToTop = () => setExpanded(new Set(topLevelIds));
-  const resetView = () => {
-    setQuery("");
-    setExpanded(new Set(discussionTree.map((section) => section.id)));
-    setActiveId(discussionTree[0].id);
+  const canContinue = currentQuestion ? isAnswered(currentQuestion, answers) : false;
+  const isLast = currentIndex === visibleQuestions.length - 1;
+
+  const next = () => {
+    if (isLast) {
+      setSubmitted(true);
+      return;
+    }
+    setCurrentIndex((prev) => Math.min(prev + 1, visibleQuestions.length - 1));
   };
 
-  const branchCount = getBranchCount(filteredTree);
-  const questionCount = getQuestionCount(filteredTree);
+  const back = () => setCurrentIndex((prev) => Math.max(prev - 1, 0));
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-[#F2F1F4] px-4 py-8 text-[#120F0D] md:px-8">
+        <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Diagnostic summary ready
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">Generate Diagnostic Summary</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
+            In the live app, this raw response set can be emailed directly to you. For now, this screen shows the exact structured content that would be sent.
+          </p>
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitted(false);
+              setCurrentIndex(0);
+            }}
+            className="mt-6 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+          >
+            Review responses again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F2F1F4] text-[#120F0D]">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-[132px] shrink-0 flex-col border-r border-white/8 bg-[#232326] text-white lg:flex">
-          <div className="flex h-24 items-center justify-center border-b border-white/8 px-4">
-            <div className="flex h-[70px] w-[70px] items-center justify-center rounded-xl bg-[#F4F4F5] text-sm font-semibold text-[#120F0D] shadow-sm">
-              AutogenAI
+      <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
+        <div className="mb-8 rounded-[30px] border border-[#D9D8DE] bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Pre-Workshop Diagnostic
+          </div>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Help us tailor your session</h1>
+              <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
+                This diagnostic is designed to work both as a self-assessment and as a guided discussion. Most responses are point-and-click, with optional type fields when you choose Other.
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setGuidedMode((prev) => !prev)}
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${guidedMode ? "border-[#6D39F8] bg-[#ECE8FF] text-[#6D39F8]" : "border-[#D9D8DE] bg-white text-[#60606B]"}`}
+            >
+              {guidedMode ? "Guided mode on" : "Switch to guided mode"}
+            </button>
           </div>
-          <div className="space-y-1 px-2 py-6">
-            {platformNav.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={classNames(
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition",
-                    item.active
-                      ? "bg-[#CCB6FF] text-[#120F0D]"
-                      : "text-white/85 hover:bg-white/8"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
+        </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-20 items-center justify-between bg-[#232326] px-5 text-white md:px-8">
-            <div className="flex items-center gap-3">
-              <button className="rounded-xl border border-white/10 bg-white/5 p-2 text-white/90">
-                <PanelLeft className="h-4 w-4" />
+        <div className="grid gap-6 lg:grid-cols-[1fr,320px]">
+          <div>
+            <ProgressBar current={currentIndex + 1} total={visibleQuestions.length} />
+            {currentQuestion && (
+              <QuestionRenderer question={currentQuestion} answers={answers} setAnswer={setAnswer} />
+            )}
+
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={back}
+                disabled={currentIndex === 0}
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#60606B] transition disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={next}
+                disabled={!canContinue}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isLast ? "Generate Diagnostic Summary" : "Continue"}
+                {!isLast && <ChevronRight className="h-4 w-4" />}
               </button>
             </div>
-            <div className="text-2xl font-medium tracking-tight">AutogenAI</div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90">
-              derek.gatlin@autogenai.com
+          </div>
+
+          <aside className="rounded-[28px] border border-[#D9D8DE] bg-white p-5 shadow-sm">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Session notes</div>
+            <div className="rounded-2xl bg-[#FAFAFC] p-4 text-sm leading-6 text-[#60606B]">
+              {guidedMode
+                ? "Use this mode if a CSM is talking through the diagnostic live with the client. Keep the conversation natural and use optional Other fields only when needed."
+                : "This version is optimized for self-assessment. The goal is to collect light, structured responses quickly before the session."}
             </div>
-          </header>
 
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div className="mx-auto max-w-[1500px] rounded-[30px] border border-[#D9D8DE] bg-[#F7F7F8] shadow-[0_24px_60px_-35px_rgba(18,15,13,0.35)]">
-              <div className="grid gap-0 lg:grid-cols-[320px,1fr]">
-                <aside className="border-b border-[#DDDCE2] bg-[#F3F3F6] p-5 lg:border-b-0 lg:border-r">
-                  <div className="mb-5 flex items-center justify-between">
-                    <button className="rounded-full border border-[#DDDCE2] bg-white px-4 py-2 text-sm font-medium text-[#3D3D46] shadow-sm">
-                      New Session
-                    </button>
-                    <button className="rounded-xl p-2 text-[#4D4D57] hover:bg-white/60">
-                      <PanelLeft className="h-4 w-4" />
-                    </button>
+            <div className="mt-5">
+              <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Current response preview</div>
+              <div className="max-h-[420px] overflow-auto rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4 text-sm leading-6 text-[#27272F]">
+                {visibleQuestions.slice(0, currentIndex + 1).map((q) => (
+                  <div key={q.id} className="mb-4 last:mb-0">
+                    <div className="font-semibold text-[#120F0D]">{q.title}</div>
+                    <div className="mt-1 text-[#60606B]">{formatValue(q, answers)}</div>
                   </div>
-
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#868691]" />
-                    <input
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search guide"
-                      className="w-full rounded-2xl border border-[#D9D8DE] bg-white px-10 py-3 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
-                    />
-                  </div>
-
-                  <div className="mt-4 grid gap-2">
-                    <button
-                      type="button"
-                      onClick={expandAll}
-                      className="rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#3D3D46] transition hover:bg-[#FAFAFC]"
-                    >
-                      Expand all
-                    </button>
-                    <button
-                      type="button"
-                      onClick={collapseToTop}
-                      className="rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#3D3D46] transition hover:bg-[#FAFAFC]"
-                    >
-                      Collapse to top level
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetView}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#6D39F8] transition hover:bg-[#FAFAFC]"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      Reset view
-                    </button>
-                  </div>
-
-                  <div className="mt-6 space-y-2">
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8B8B95]">
-                      Discussion areas
-                    </div>
-                    {filteredTree.map((section) => {
-                      const Icon = section.icon;
-                      const selected = activeId === section.id;
-                      return (
-                        <button
-                          key={section.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveId(section.id);
-                            setExpanded((prev) => new Set(prev).add(section.id));
-                          }}
-                          className={classNames(
-                            "flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm transition",
-                            selected
-                              ? "border-[#6D39F8] bg-[#6D39F8] text-white shadow-sm"
-                              : "border-[#D9D8DE] bg-white text-[#3D3D46] hover:bg-[#FAFAFC]"
-                          )}
-                        >
-                          <div
-                            className={classNames(
-                              "rounded-xl p-2",
-                              selected ? "bg-white/10" : "bg-[#F0EEF8] text-[#6D39F8]"
-                            )}
-                          >
-                            {Icon ? <Icon className="h-4 w-4" /> : <Layers3 className="h-4 w-4" />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium">{section.title}</div>
-                            <div className={classNames("mt-0.5 text-xs", selected ? "text-white/75" : "text-[#8B8B95]")}>
-                              {section.eyebrow}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </aside>
-
-                <section className="p-5 md:p-6 lg:p-8">
-                  <div className="mb-8 rounded-[28px] border border-[#D9D8DE] bg-white px-6 py-7 shadow-sm">
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Interactive discussion guide
-                    </div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-[#120F0D] md:text-5xl">
-                      CSM Discovery Guide
-                    </h1>
-                    <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
-                      Aligned to the AutogenAI platform shell. Expand into deeper branches only when the client gives a signal worth exploring, then collapse back to the top-level outline and move to a different area. Use the transcript as the main input for the workshop and Advanced Learning Plan.
-                    </p>
-
-                    <div className="mt-6 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8B8B95]">Top-level sections</div>
-                        <div className="mt-2 text-2xl font-semibold text-[#120F0D]">{filteredTree.length}</div>
-                      </div>
-                      <div className="rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8B8B95]">Expandable branches</div>
-                        <div className="mt-2 text-2xl font-semibold text-[#120F0D]">{branchCount}</div>
-                      </div>
-                      <div className="rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8B8B95]">Discussion questions</div>
-                        <div className="mt-2 text-2xl font-semibold text-[#120F0D]">{questionCount}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5">
-                    {filteredTree.map((node) => (
-                      <TreeNode
-                        key={node.id}
-                        node={node}
-                        expanded={expanded}
-                        onToggle={toggle}
-                        activeId={activeId}
-                        setActiveId={setActiveId}
-                      />
-                    ))}
-                  </div>
-                </section>
+                ))}
               </div>
             </div>
-          </main>
+          </aside>
         </div>
       </div>
     </div>
