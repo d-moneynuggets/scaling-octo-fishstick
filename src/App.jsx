@@ -1,3 +1,7 @@
 export default function App() {
-  // your component code
+  return (
+    <div style={{ padding: 40, fontFamily: "sans-serif" }}>
+      Vercel is working
+    </div>
+  );
 }
