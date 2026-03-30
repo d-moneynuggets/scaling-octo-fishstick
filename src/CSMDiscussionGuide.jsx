@@ -11,6 +11,18 @@ import {
   Target,
 } from "lucide-react";
 
+const styles = {
+  bg: "#F2F1F4",
+  card: "#FFFFFF",
+  ink: "#120F0D",
+  muted: "#60606B",
+  border: "#D9D8DE",
+  purple: "#6D39F8",
+  purpleSoft: "#ECE8FF",
+  lime: "#D6EA8A",
+  chipBg: "#FAFAFC",
+};
+
 const ROUTES = {
   CONTENT: ["finding_content", "starting_from_scratch", "version_control"],
   SME: ["sme_delays"],
@@ -463,4 +475,216 @@ function QuestionRenderer({ question, answers, setAnswer }) {
             <OptionCard
               key={option.value}
               label={option.label}
-              selected={value === option.value
+              selected={value === option.value}
+              onClick={() => setAnswer(question.id, option.value)}
+              multi={false}
+            />
+          ))}
+          {shouldShowOtherField(question, answers) && (
+            <input
+              value={answers[question.other.key] || ""}
+              onChange={(e) => setAnswer(question.other.key, e.target.value)}
+              placeholder={question.other.placeholder}
+              className="rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+            />
+          )}
+        </div>
+      )}
+
+      {question.type === "multi" && (
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          {options.map((option) => {
+            const selected = value.includes(option.value);
+            const atLimit = question.max && value.length >= question.max && !selected;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={atLimit}
+                onClick={() => {
+                  const next = selected
+                    ? value.filter((x) => x !== option.value)
+                    : [...value, option.value];
+                  setAnswer(question.id, next);
+                }}
+                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${atLimit ? "cursor-not-allowed opacity-45" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-medium leading-6">{option.label}</div>
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      selected ? "border-[#6D39F8] bg-[#6D39F8] text-white" : "border-[#C9C8D1] bg-white text-transparent"
+                    }`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+          {shouldShowOtherField(question, answers) && (
+            <div className="md:col-span-2">
+              <input
+                value={answers[question.other.key] || ""}
+                onChange={(e) => setAnswer(question.other.key, e.target.value)}
+                placeholder={question.other.placeholder}
+                className="w-full rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatValue(question, answers) {
+  const value = answers[question.id];
+  if (!value || (Array.isArray(value) && value.length === 0)) return "—";
+
+  const optionMap = Object.fromEntries((question.options || []).map((opt) => [opt.value, opt.label]));
+
+  if (Array.isArray(value)) {
+    const labels = value.map((v) => {
+      if (v === "other" && question.other) {
+        const otherText = answers[question.other.key]?.trim();
+        return otherText ? `Other: ${otherText}` : "Other";
+      }
+      return optionMap[v] || v;
+    });
+    return labels.join(", ");
+  }
+
+  if (value === "other" && question.other) {
+    const otherText = answers[question.other.key]?.trim();
+    return otherText ? `Other: ${otherText}` : "Other";
+  }
+
+  return optionMap[value] || value;
+}
+
+function getEmailPreview(visibleQuestions, answers) {
+  return visibleQuestions
+    .map((q) => `${q.title}
+${formatValue(q, answers)}`)
+    .join("
+
+");
+}
+
+export default function CSMDiscussionGuide() {
+  const [answers, setAnswers] = useState({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+
+  const visibleQuestions = useMemo(() => getVisibleQuestions(answers), [answers]);
+  const currentQuestion = visibleQuestions[currentIndex];
+  const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
+
+  const setAnswer = (key, value) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const canContinue = currentQuestion ? isAnswered(currentQuestion, answers) : false;
+  const isLast = currentIndex === visibleQuestions.length - 1;
+
+  const next = () => {
+    if (isLast) {
+      setSubmitted(true);
+      return;
+    }
+    setCurrentIndex((prev) => Math.min(prev + 1, visibleQuestions.length - 1));
+  };
+
+  const back = () => setCurrentIndex((prev) => Math.max(prev - 1, 0));
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-[#F2F1F4] px-4 py-8 text-[#120F0D] md:px-8">
+        <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Diagnostic summary ready
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">Generate Diagnostic Summary</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
+            In the live app, this raw response set can be emailed directly. For now, this screen shows the exact structured content that would be sent.
+          </p>
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitted(false);
+              setCurrentIndex(0);
+            }}
+            className="mt-6 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+          >
+            Review responses again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F2F1F4] text-[#120F0D]">
+      <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-12">
+        <div className="mb-8 rounded-[30px] border border-[#D9D8DE] bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Pre-Workshop Diagnostic
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Help us tailor your session</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
+            This short diagnostic is designed to gather light, structured input before your session. Most responses are point-and-click, with optional type fields when you choose Other.
+          </p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[1fr,320px]">
+          <div>
+            <ProgressBar current={currentIndex + 1} total={visibleQuestions.length} />
+            {currentQuestion && (
+              <QuestionRenderer question={currentQuestion} answers={answers} setAnswer={setAnswer} />
+            )}
+
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={back}
+                disabled={currentIndex === 0}
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#60606B] transition disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={next}
+                disabled={!canContinue}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isLast ? "Generate Diagnostic Summary" : "Continue"}
+                {!isLast && <ChevronRight className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <aside className="rounded-[28px] border border-[#D9D8DE] bg-white p-5 shadow-sm">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Current response preview</div>
+            <div className="max-h-[520px] overflow-auto rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4 text-sm leading-6 text-[#27272F]">
+              {visibleQuestions.slice(0, currentIndex + 1).map((q) => (
+                <div key={q.id} className="mb-4 last:mb-0">
+                  <div className="font-semibold text-[#120F0D]">{q.title}</div>
+                  <div className="mt-1 text-[#60606B]">{formatValue(q, answers)}</div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
