@@ -1,381 +1,638 @@
-const DIMENSIONS = {
-  PROCESS: "process_clarity",
-  CONTENT: "content_readiness",
-  COLLAB: "collaboration_review",
-  COMPLIANCE: "compliance_control",
-  ENABLEMENT: "enablement_execution",
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Sparkles,
+  Workflow,
+  Compass,
+  Library,
+  Users,
+  Target,
+} from "lucide-react";
+
+const styles = {
+  bg: "#F2F1F4",
+  card: "#FFFFFF",
+  ink: "#120F0D",
+  muted: "#60606B",
+  border: "#D9D8DE",
+  purple: "#6D39F8",
+  purpleSoft: "#ECE8FF",
+  lime: "#D6EA8A",
+  chipBg: "#FAFAFC",
 };
 
-const DIMENSION_LABELS = {
-  [DIMENSIONS.PROCESS]: "Process Clarity",
-  [DIMENSIONS.CONTENT]: "Content Readiness",
-  [DIMENSIONS.COLLAB]: "Collaboration and Review Flow",
-  [DIMENSIONS.COMPLIANCE]: "Compliance and Control",
-  [DIMENSIONS.ENABLEMENT]: "Enablement and Execution Readiness",
+const ROUTES = {
+  CONTENT: ["finding_content", "starting_from_scratch", "version_control"],
+  SME: ["sme_delays"],
+  REVIEW: ["review_comments", "ownership_coordination"],
+  COMPLIANCE: ["requirement_tracking"],
+  PRODUCTION: ["formatting_final_assembly"],
+  RFI: ["rfi_questionnaires"],
 };
 
-const FOCUS_AREA_LIBRARY = {
-  [DIMENSIONS.PROCESS]: {
-    key: "workflow_design",
-    title: "Workflow definition and intake discipline",
-    sessionType: "Projects & Collaboration",
-    why: "Your responses suggest that variation in kickoff, ownership, or stage definition is creating downstream drag.",
-  },
-  [DIMENSIONS.CONTENT]: {
-    key: "content_reuse",
-    title: "Content organization and reuse workflow",
-    sessionType: "Library Best Practices",
-    why: "Your responses indicate that finding, trusting, or reusing content is taking more effort than it should.",
-  },
-  [DIMENSIONS.COLLAB]: {
-    key: "review_handoffs",
-    title: "SME contribution and review handoff design",
-    sessionType: "Projects & Collaboration",
-    why: "Your responses suggest that SME inputs, review cycles, or ownership visibility are shaping speed and consistency.",
-  },
-  [DIMENSIONS.COMPLIANCE]: {
-    key: "requirements_traceability",
-    title: "Requirements tracking and compliance confidence",
-    sessionType: "Compliance Matrices & Requirements Traceability",
-    why: "Your responses indicate that requirements identification or validation would benefit from more structure.",
-  },
-  [DIMENSIONS.ENABLEMENT]: {
-    key: "enablement_guidance",
-    title: "Role-based enablement, prompts, and execution support",
-    sessionType: "Prompting Fundamentals",
-    why: "Your responses suggest the team would benefit from more practical guidance, better prompts, or smoother adoption support.",
-  },
-};
+function otherField(key, label = "Add detail (optional)") {
+  return { key, label, placeholder: "Type here..." };
+}
 
-const ACADEMY_RESOURCES = [
+const questions = [
   {
-    key: "projects_drafts",
-    title: "Projects and Drafts",
-    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/4tqTBrK3CBDSbfrsb3KBKoBPJ9F-Wy-t",
-    dimensions: [DIMENSIONS.PROCESS, DIMENSIONS.COLLAB],
-    level: "foundational",
-    description: "Best for tightening project structure, team ownership, and shared working flow.",
+    id: "company_name",
+    type: "text",
+    title: "What should we call your team or company?",
+    helper: "Optional, but helpful for tailoring your session.",
+    optional: true,
+    placeholder: "Type your company or team name",
+    icon: Sparkles,
   },
   {
-    key: "private_project",
-    title: "Setting Up a Private Project",
-    url: "https://share.articulate.com/usT_tzPV9ihq0PYYaKUbD#/lessons/26w8YSBTsNU5-6yEFFBVdeMIHOQWKs2C",
-    dimensions: [DIMENSIONS.PROCESS, DIMENSIONS.COLLAB],
-    level: "foundational",
-    description: "Useful when roles, contributors, or access boundaries need to be clearer.",
+    id: "work_type",
+    type: "multi",
+    title: "What type of work do you primarily produce?",
+    helper: "Choose all that apply.",
+    icon: Workflow,
+    options: [
+      { value: "federal", label: "Federal / government proposals" },
+      { value: "commercial", label: "Commercial / B2B proposals" },
+      { value: "rfi_questionnaires", label: "RFIs / questionnaires / DDQs" },
+      { value: "grants", label: "Grants / funding applications" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("work_type_other"),
   },
   {
-    key: "document_library",
-    title: "Document Library",
-    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/EZJ22zJ7pjbcm9S1s5FEWAyA4tGWkDnq",
-    dimensions: [DIMENSIONS.CONTENT],
-    level: "foundational",
-    description: "Best next step for improving content findability, source trust, and reuse.",
+    id: "process_structure",
+    type: "single",
+    title: "How would you describe your current process?",
+    icon: Workflow,
+    options: [
+      { value: "highly_structured", label: "Highly structured and repeatable" },
+      { value: "somewhat_structured", label: "Somewhat structured, but varies" },
+      { value: "mostly_adhoc", label: "Mostly ad hoc" },
+      { value: "depends", label: "It depends on the opportunity" },
+    ],
   },
   {
-    key: "extract",
-    title: "Interrogating Client Documents with Extract",
-    url: "https://rise.articulate.com/share/IVZTAUM-E3jOmZcKQNZitftolS5vjdrD",
-    dimensions: [DIMENSIONS.COMPLIANCE, DIMENSIONS.PROCESS],
-    level: "intermediate",
-    description: "Helpful for requirement extraction, document review, and compliance confidence.",
+    id: "top_outcomes",
+    type: "multi",
+    title: "What matters most right now?",
+    helper: "Choose up to 2.",
+    icon: Target,
+    max: 2,
+    options: [
+      { value: "speed", label: "Faster turnaround" },
+      { value: "quality", label: "Better quality" },
+      { value: "compliance", label: "Better compliance" },
+      { value: "teamwork", label: "Better teamwork and review flow" },
+      { value: "reuse", label: "Better reuse of content" },
+      { value: "enablement", label: "Better onboarding / enablement" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("top_outcomes_other"),
   },
   {
-    key: "gamma",
-    title: "Review a Bid with Gamma Review",
-    url: "https://rise.articulate.com/share/0TiXrPF1sACW6blwH_c5MgLK4Xlj04yd",
-    dimensions: [DIMENSIONS.COLLAB, DIMENSIONS.COMPLIANCE],
-    level: "intermediate",
-    description: "Useful for strengthening structured review, quality control, and validation discipline.",
+    id: "writing_model",
+    type: "single",
+    title: "How does most of the writing happen today?",
+    icon: Users,
+    options: [
+      { value: "dedicated_writers", label: "Dedicated writers draft most content" },
+      { value: "smes_write_edit", label: "SMEs draft and someone edits" },
+      { value: "distributed", label: "Writing is distributed across the team" },
+      { value: "varies", label: "It varies" },
+    ],
   },
   {
-    key: "editor",
-    title: "Editor",
-    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/ft_J-Bz_Z0I8iVhtx9gpJOTBMfMMxkzz",
-    dimensions: [DIMENSIONS.ENABLEMENT, DIMENSIONS.CONTENT],
-    level: "foundational",
-    description: "Good for teams that need smoother shaping, editing, and response refinement workflows.",
+    id: "new_opportunity",
+    type: "single",
+    title: "What usually happens when a new opportunity comes in?",
+    icon: Workflow,
+    options: [
+      { value: "formal_kickoff", label: "There is a formal intake or kickoff" },
+      { value: "informal_coordination", label: "There is an informal review and someone starts organizing" },
+      { value: "one_person_drives", label: "One person usually picks it up and gets going" },
+      { value: "varies", label: "It varies case by case" },
+    ],
   },
   {
-    key: "inputs",
-    title: "Inputs",
-    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/S6cpd35Y03Uf_llEiZJ6O9DP-Os6SVgw",
-    dimensions: [DIMENSIONS.ENABLEMENT, DIMENSIONS.CONTENT],
-    level: "foundational",
-    description: "Strong fit for teams that need better prompt structure, reusable instructions, or cleaner inputs.",
+    id: "workflow_defined",
+    type: "multi",
+    title: "Which parts of your workflow feel well defined?",
+    helper: "Choose all that apply.",
+    icon: Workflow,
+    options: [
+      { value: "intake", label: "Intake / kickoff" },
+      { value: "requirements", label: "Requirement review" },
+      { value: "drafting", label: "Drafting" },
+      { value: "sme_input", label: "SME input" },
+      { value: "review_cycles", label: "Review cycles" },
+      { value: "final_production", label: "Final production" },
+      { value: "post_submission", label: "Post-submission review" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("workflow_defined_other"),
   },
   {
-    key: "qa_workbooks",
-    title: "Q&A Workbooks",
-    url: "https://share.articulate.com/qx3PB6T2xwKNnlhhghLQC#/lessons/Ij_xTosfZKTHjTsWbK1gdFKXi0zUs_xC",
-    dimensions: [DIMENSIONS.ENABLEMENT, DIMENSIONS.COMPLIANCE],
-    level: "intermediate",
-    description: "Useful when questionnaire-style workflows, form-filling, or repeatable answer generation are important.",
+    id: "friction_points",
+    type: "multi",
+    title: "Where do you feel the most friction today?",
+    helper: "Choose up to 4.",
+    icon: Compass,
+    max: 4,
+    options: [
+      { value: "finding_content", label: "Finding the right content" },
+      { value: "starting_from_scratch", label: "Starting from scratch" },
+      { value: "sme_delays", label: "SME delays" },
+      { value: "review_comments", label: "Review comments" },
+      { value: "requirement_tracking", label: "Requirement tracking" },
+      { value: "formatting_final_assembly", label: "Formatting / final assembly" },
+      { value: "version_control", label: "Version control" },
+      { value: "ownership_coordination", label: "Ownership / coordination" },
+      { value: "training_onboarding", label: "Training / onboarding" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("friction_points_other"),
   },
   {
-    key: "research",
-    title: "Research",
-    url: "https://share.articulate.com/qx3PB6T2xwKNnlhhghLQC#/lessons/G4WkUnRGYXRYWyeuanvPhcP8ZAUwN9L8",
-    dimensions: [DIMENSIONS.PROCESS, DIMENSIONS.CONTENT],
-    level: "intermediate",
-    description: "Helpful when teams need better discovery, synthesis, or structured research support.",
+    id: "urgent_issue",
+    type: "derived-single",
+    title: "Which of these is the most urgent to improve?",
+    icon: Compass,
+    deriveFrom: "friction_points",
+  },
+  {
+    id: "content_location",
+    branch: "content",
+    type: "single",
+    title: "Where does your content live today?",
+    icon: Library,
+    options: [
+      { value: "sharepoint", label: "SharePoint" },
+      { value: "google_drive", label: "Google Drive" },
+      { value: "shared_folders", label: "Shared folders" },
+      { value: "multiple_places", label: "Multiple places" },
+      { value: "no_clear_source", label: "No clear source of truth" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("content_location_other"),
+  },
+  {
+    id: "content_findability",
+    branch: "content",
+    type: "single",
+    title: "How easy is it to find the right version of content?",
+    icon: Library,
+    options: [
+      { value: "easy", label: "Very easy" },
+      { value: "manageable", label: "Usually manageable" },
+      { value: "difficult", label: "Often difficult" },
+      { value: "very_difficult", label: "Very difficult" },
+    ],
+  },
+  {
+    id: "sme_input_type",
+    branch: "sme",
+    type: "multi",
+    title: "How do SMEs usually provide input?",
+    helper: "Choose all that apply.",
+    icon: Users,
+    options: [
+      { value: "draft_text", label: "Draft text" },
+      { value: "comments", label: "Comments" },
+      { value: "bullet_points", label: "Bullet points" },
+      { value: "verbal", label: "Verbal explanation" },
+      { value: "meetings", label: "Meetings / interviews" },
+      { value: "inconsistent", label: "It varies widely" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("sme_input_type_other"),
+  },
+  {
+    id: "sme_input_late",
+    branch: "sme",
+    type: "single",
+    title: "What usually happens when SME input is late?",
+    icon: Users,
+    options: [
+      { value: "delays_everything", label: "It delays the whole process" },
+      { value: "someone_fills_gap", label: "Someone else fills the gap" },
+      { value: "quality_drops", label: "Quality drops" },
+      { value: "workarounds", label: "We work around it as best we can" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("sme_input_late_other"),
+  },
+  {
+    id: "review_challenges",
+    branch: "review",
+    type: "multi",
+    title: "What’s hardest about reviews?",
+    helper: "Choose up to 2.",
+    icon: Users,
+    max: 2,
+    options: [
+      { value: "too_many_comments", label: "Too many comments" },
+      { value: "conflicting_feedback", label: "Conflicting feedback" },
+      { value: "slow_turnaround", label: "Slow reviewer turnaround" },
+      { value: "hard_to_decide", label: "Hard to decide what to accept" },
+      { value: "tracking_status", label: "Tracking status" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("review_challenges_other"),
+  },
+  {
+    id: "requirement_method",
+    branch: "compliance",
+    type: "single",
+    title: "How do you currently identify requirements that must be answered?",
+    icon: Target,
+    options: [
+      { value: "formal_matrix", label: "Formal compliance matrix or equivalent" },
+      { value: "manual_review", label: "Manual review of the source document" },
+      { value: "mixed", label: "A mix of both" },
+      { value: "no_consistent_method", label: "No consistent method" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("requirement_method_other"),
+  },
+  {
+    id: "compliance_confidence",
+    branch: "compliance",
+    type: "single",
+    title: "How confident are you that requirements are fully tracked today?",
+    icon: Target,
+    options: [
+      { value: "very_confident", label: "Very confident" },
+      { value: "mostly_confident", label: "Mostly confident" },
+      { value: "somewhat_confident", label: "Somewhat confident" },
+      { value: "not_confident", label: "Not confident" },
+    ],
+  },
+  {
+    id: "production_manual_steps",
+    branch: "production",
+    type: "multi",
+    title: "Which final production steps feel more manual than they should?",
+    helper: "Choose all that apply.",
+    icon: Workflow,
+    options: [
+      { value: "template_setup", label: "Template setup" },
+      { value: "formatting", label: "Formatting" },
+      { value: "copy_paste", label: "Copy/paste into final docs" },
+      { value: "portal_entry", label: "Portal entry" },
+      { value: "packaging", label: "Final packaging" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("production_manual_steps_other"),
+  },
+  {
+    id: "rfi_hardest",
+    branch: "rfi",
+    type: "multi",
+    title: "What’s hardest about those workflows?",
+    helper: "Choose up to 2.",
+    icon: Workflow,
+    max: 2,
+    options: [
+      { value: "finding_answers", label: "Finding answers quickly" },
+      { value: "consistency", label: "Maintaining consistency across answers" },
+      { value: "format_limits", label: "Character or format limits" },
+      { value: "reviewer_delays", label: "Reviewer delays" },
+      { value: "reuse", label: "Reuse of prior responses" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("rfi_hardest_other"),
+  },
+  {
+    id: "support_needs",
+    type: "multi",
+    title: "What would help your team most right now?",
+    helper: "Choose up to 2.",
+    icon: Target,
+    max: 2,
+    options: [
+      { value: "clearer_workflow", label: "A clearer overall workflow" },
+      { value: "content_org", label: "Better content organization" },
+      { value: "platform_usage", label: "Better use of the platform" },
+      { value: "collaboration", label: "Better collaboration and review flow" },
+      { value: "compliance_support", label: "Better compliance support" },
+      { value: "prompts", label: "Better prompts or examples" },
+      { value: "training", label: "Better training for different roles" },
+      { value: "other", label: "Other" },
+    ],
+    other: otherField("support_needs_other"),
+  },
+  {
+    id: "change_readiness",
+    type: "single",
+    title: "How ready is your team to adopt changes?",
+    icon: Users,
+    options: [
+      { value: "very_ready", label: "Very ready" },
+      { value: "cautious", label: "Open, but cautious" },
+      { value: "mixed", label: "Mixed" },
+      { value: "resistant", label: "Change-resistant" },
+    ],
+  },
+  {
+    id: "success_60_90",
+    type: "text",
+    title: "If this goes well, what should feel better in 60–90 days?",
+    helper: "Optional.",
+    optional: true,
+    placeholder: "Add detail (optional)",
+    icon: Sparkles,
   },
 ];
 
-function createDimensionState() {
-  return {
-    [DIMENSIONS.PROCESS]: 0,
-    [DIMENSIONS.CONTENT]: 0,
-    [DIMENSIONS.COLLAB]: 0,
-    [DIMENSIONS.COMPLIANCE]: 0,
-    [DIMENSIONS.ENABLEMENT]: 0,
-  };
-}
-
-function addScore(scores, dimension, amount) {
-  scores[dimension] += amount;
-}
-
-function getDimensionScores(answers) {
-  const scores = createDimensionState();
-
-  const workType = answers.work_type || [];
-  const outcomes = answers.top_outcomes || [];
+function getVisibleQuestions(answers) {
+  const visible = [];
   const friction = answers.friction_points || [];
-  const workflowDefined = answers.workflow_defined || [];
-  const support = answers.support_needs || [];
-  const reviewChallenges = answers.review_challenges || [];
-  const productionManual = answers.production_manual_steps || [];
-  const smeInputType = answers.sme_input_type || [];
+  const workType = answers.work_type || [];
 
-  // Process Clarity
-  if (answers.process_structure === "highly_structured") addScore(scores, DIMENSIONS.PROCESS, 3);
-  if (answers.process_structure === "somewhat_structured") addScore(scores, DIMENSIONS.PROCESS, 1);
-  if (answers.process_structure === "mostly_adhoc") addScore(scores, DIMENSIONS.PROCESS, -3);
-  if (answers.process_structure === "depends") addScore(scores, DIMENSIONS.PROCESS, -2);
+  for (const q of questions) {
+    if (!q.branch) {
+      visible.push(q);
+      continue;
+    }
 
-  if (answers.new_opportunity === "formal_kickoff") addScore(scores, DIMENSIONS.PROCESS, 2);
-  if (answers.new_opportunity === "informal_coordination") addScore(scores, DIMENSIONS.PROCESS, 0);
-  if (answers.new_opportunity === "one_person_drives") addScore(scores, DIMENSIONS.PROCESS, -2);
-  if (answers.new_opportunity === "varies") addScore(scores, DIMENSIONS.PROCESS, -1);
-
-  addScore(scores, DIMENSIONS.PROCESS, Math.min(workflowDefined.length, 4) * 0.5);
-  if (support.includes("clearer_workflow")) addScore(scores, DIMENSIONS.PROCESS, -2);
-
-  // Content Readiness
-  if (friction.includes("finding_content")) addScore(scores, DIMENSIONS.CONTENT, -2);
-  if (friction.includes("starting_from_scratch")) addScore(scores, DIMENSIONS.CONTENT, -2);
-  if (friction.includes("version_control")) addScore(scores, DIMENSIONS.CONTENT, -2);
-
-  if (answers.content_location === "sharepoint" || answers.content_location === "google_drive") {
-    addScore(scores, DIMENSIONS.CONTENT, 1);
+    if (q.branch === "content" && friction.some((x) => ROUTES.CONTENT.includes(x))) visible.push(q);
+    if (q.branch === "sme" && friction.some((x) => ROUTES.SME.includes(x))) visible.push(q);
+    if (q.branch === "review" && friction.some((x) => ROUTES.REVIEW.includes(x))) visible.push(q);
+    if (q.branch === "compliance" && (friction.some((x) => ROUTES.COMPLIANCE.includes(x)) || workType.some((x) => ["federal", "grants"].includes(x)))) visible.push(q);
+    if (q.branch === "production" && (friction.some((x) => ROUTES.PRODUCTION.includes(x)) || answers.top_outcomes?.includes("speed"))) visible.push(q);
+    if (q.branch === "rfi" && workType.some((x) => ["rfi_questionnaires"].includes(x))) visible.push(q);
   }
-  if (answers.content_location === "multiple_places") addScore(scores, DIMENSIONS.CONTENT, -1);
-  if (answers.content_location === "no_clear_source") addScore(scores, DIMENSIONS.CONTENT, -3);
 
-  if (answers.content_findability === "easy") addScore(scores, DIMENSIONS.CONTENT, 3);
-  if (answers.content_findability === "manageable") addScore(scores, DIMENSIONS.CONTENT, 1);
-  if (answers.content_findability === "difficult") addScore(scores, DIMENSIONS.CONTENT, -2);
-  if (answers.content_findability === "very_difficult") addScore(scores, DIMENSIONS.CONTENT, -3);
-
-  if (outcomes.includes("reuse")) addScore(scores, DIMENSIONS.CONTENT, -1);
-  if (support.includes("content_org")) addScore(scores, DIMENSIONS.CONTENT, -2);
-
-  // Collaboration / Review
-  if (answers.writing_model === "dedicated_writers") addScore(scores, DIMENSIONS.COLLAB, 1);
-  if (answers.writing_model === "smes_write_edit") addScore(scores, DIMENSIONS.COLLAB, -1);
-  if (answers.writing_model === "distributed") addScore(scores, DIMENSIONS.COLLAB, -2);
-
-  if (friction.includes("sme_delays")) addScore(scores, DIMENSIONS.COLLAB, -2);
-  if (friction.includes("review_comments")) addScore(scores, DIMENSIONS.COLLAB, -2);
-  if (friction.includes("ownership_coordination")) addScore(scores, DIMENSIONS.COLLAB, -2);
-
-  if (answers.sme_input_late === "delays_everything") addScore(scores, DIMENSIONS.COLLAB, -2);
-  if (answers.sme_input_late === "quality_drops") addScore(scores, DIMENSIONS.COLLAB, -2);
-  if (answers.sme_input_late === "someone_fills_gap") addScore(scores, DIMENSIONS.COLLAB, -1);
-
-  if (smeInputType.includes("inconsistent")) addScore(scores, DIMENSIONS.COLLAB, -1);
-
-  addScore(scores, DIMENSIONS.COLLAB, reviewChallenges.length * -0.5);
-
-  if (outcomes.includes("teamwork")) addScore(scores, DIMENSIONS.COLLAB, -1);
-  if (support.includes("collaboration")) addScore(scores, DIMENSIONS.COLLAB, -2);
-
-  // Compliance / Control
-  if (workType.some((x) => ["federal", "grants"].includes(x))) addScore(scores, DIMENSIONS.COMPLIANCE, -1);
-  if (friction.includes("requirement_tracking")) addScore(scores, DIMENSIONS.COMPLIANCE, -3);
-
-  if (answers.requirement_method === "formal_matrix") addScore(scores, DIMENSIONS.COMPLIANCE, 3);
-  if (answers.requirement_method === "mixed") addScore(scores, DIMENSIONS.COMPLIANCE, 1);
-  if (answers.requirement_method === "manual_review") addScore(scores, DIMENSIONS.COMPLIANCE, -1);
-  if (answers.requirement_method === "no_consistent_method") addScore(scores, DIMENSIONS.COMPLIANCE, -3);
-
-  if (answers.compliance_confidence === "very_confident") addScore(scores, DIMENSIONS.COMPLIANCE, 3);
-  if (answers.compliance_confidence === "mostly_confident") addScore(scores, DIMENSIONS.COMPLIANCE, 1);
-  if (answers.compliance_confidence === "somewhat_confident") addScore(scores, DIMENSIONS.COMPLIANCE, -1);
-  if (answers.compliance_confidence === "not_confident") addScore(scores, DIMENSIONS.COMPLIANCE, -3);
-
-  if (outcomes.includes("compliance")) addScore(scores, DIMENSIONS.COMPLIANCE, -1);
-  if (support.includes("compliance_support")) addScore(scores, DIMENSIONS.COMPLIANCE, -2);
-
-  // Enablement / Execution
-  if (friction.includes("training_onboarding")) addScore(scores, DIMENSIONS.ENABLEMENT, -3);
-  if (friction.includes("formatting_final_assembly")) addScore(scores, DIMENSIONS.ENABLEMENT, -2);
-
-  addScore(scores, DIMENSIONS.ENABLEMENT, productionManual.length * -0.5);
-
-  if (support.includes("training")) addScore(scores, DIMENSIONS.ENABLEMENT, -2);
-  if (support.includes("platform_usage")) addScore(scores, DIMENSIONS.ENABLEMENT, -2);
-  if (support.includes("prompts")) addScore(scores, DIMENSIONS.ENABLEMENT, -1);
-
-  if (outcomes.includes("speed")) addScore(scores, DIMENSIONS.ENABLEMENT, -1);
-  if (outcomes.includes("enablement")) addScore(scores, DIMENSIONS.ENABLEMENT, -1);
-
-  if (answers.change_readiness === "very_ready") addScore(scores, DIMENSIONS.ENABLEMENT, 2);
-  if (answers.change_readiness === "cautious") addScore(scores, DIMENSIONS.ENABLEMENT, 0);
-  if (answers.change_readiness === "mixed") addScore(scores, DIMENSIONS.ENABLEMENT, -1);
-  if (answers.change_readiness === "resistant") addScore(scores, DIMENSIONS.ENABLEMENT, -3);
-
-  return scores;
+  return visible;
 }
 
-function getSortedDimensions(scores) {
-  return Object.entries(scores)
-    .map(([key, value]) => ({ key, value }))
-    .sort((a, b) => a.value - b.value);
+function getUrgentOptions(answers) {
+  const selected = answers.friction_points || [];
+  const optionMap = Object.fromEntries(
+    (questions.find((q) => q.id === "friction_points")?.options || []).map((opt) => [opt.value, opt.label])
+  );
+  return selected
+    .filter((x) => x !== "other")
+    .map((value) => ({ value, label: optionMap[value] || value }));
 }
 
-function getMaturityLabel(scores) {
-  const avg =
-    Object.values(scores).reduce((sum, n) => sum + n, 0) /
-    Object.values(scores).length;
-
-  if (avg >= 1.75) return "Operational";
-  if (avg >= 0.5) return "Developing";
-  if (avg >= -0.75) return "Mixed";
-  return "Early";
+function isAnswered(question, answers) {
+  const value = answers[question.id];
+  if (question.type === "text") return question.optional ? true : Boolean(value?.trim());
+  if (question.type === "single") return Boolean(value);
+  if (question.type === "derived-single") return Boolean(value);
+  if (question.type === "multi") return Array.isArray(value) && value.length > 0;
+  return false;
 }
 
-function humanizeUrgentIssue(answers) {
-  const urgent = answers.urgent_issue || "";
-  if (!urgent) return "workflow consistency";
-  return urgent.replaceAll("_", " ");
+function shouldShowOtherField(question, answers) {
+  if (!question.other) return false;
+  const value = answers[question.id];
+  if (Array.isArray(value)) return value.includes("other");
+  return value === "other";
 }
 
-function getSnapshotSummary(answers, scores) {
-  const ranked = getSortedDimensions(scores);
-  const weakest = ranked[0];
-  const strongest = ranked[ranked.length - 1];
+function cardClass(selected) {
+  return selected
+    ? "border-[#6D39F8] bg-[#ECE8FF] text-[#120F0D] shadow-sm"
+    : "border-[#D9D8DE] bg-white text-[#120F0D] hover:border-[#BDBBC7] hover:bg-[#FAFAFC]";
+}
 
-  return {
-    maturity: getMaturityLabel(scores),
-    biggestOpportunity: DIMENSION_LABELS[weakest.key],
-    nextStep: FOCUS_AREA_LIBRARY[weakest.key].title,
-    strongestArea: DIMENSION_LABELS[strongest.key],
-  };
+function ProgressBar({ current, total }) {
+  const pct = Math.max(6, Math.round((current / total) * 100));
+  return (
+    <div className="mb-8">
+      <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#60606B]">
+        <span>Progress</span>
+        <span>{current} of {total}</span>
+      </div>
+      <div className="h-2 rounded-full bg-[#E7E7EC]">
+        <div
+          className="h-2 rounded-full bg-[#6D39F8] transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OptionCard({ label, selected, onClick, multi }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-sm font-medium leading-6">{label}</div>
+        <div
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+            selected ? "border-[#6D39F8] bg-[#6D39F8] text-white" : "border-[#C9C8D1] bg-white text-transparent"
+          }`}
+        >
+          <Check className="h-3 w-3" />
+        </div>
+      </div>
+      <div className="mt-2 text-xs text-[#60606B]">{multi ? "Tap to add or remove" : "Tap to select"}</div>
+    </button>
+  );
+}
+
+function QuestionRenderer({ question, answers, setAnswer }) {
+  const Icon = question.icon || Sparkles;
+
+  const options = useMemo(() => {
+    if (question.type === "derived-single") return getUrgentOptions(answers);
+    return question.options || [];
+  }, [question, answers]);
+
+  const value = answers[question.id] || (question.type === "multi" ? [] : "");
+
+  return (
+    <div className="rounded-[28px] border border-[#D9D8DE] bg-white p-6 shadow-sm md:p-8">
+      <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+        <Icon className="h-3.5 w-3.5" />
+        Pre-Workshop Diagnostic
+      </div>
+
+      <h2 className="text-2xl font-semibold tracking-tight text-[#120F0D] md:text-[2rem]">{question.title}</h2>
+      {question.helper && <p className="mt-3 text-sm leading-6 text-[#60606B]">{question.helper}</p>}
+
+      {question.type === "text" && (
+        <div className="mt-6">
+          <input
+            value={value}
+            onChange={(e) => setAnswer(question.id, e.target.value)}
+            placeholder={question.placeholder || "Type here..."}
+            className="w-full rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+          />
+        </div>
+      )}
+
+      {(question.type === "single" || question.type === "derived-single") && (
+        <div className="mt-6 grid gap-3">
+          {options.map((option) => (
+            <OptionCard
+              key={option.value}
+              label={option.label}
+              selected={value === option.value}
+              onClick={() => setAnswer(question.id, option.value)}
+              multi={false}
+            />
+          ))}
+          {shouldShowOtherField(question, answers) && (
+            <input
+              value={answers[question.other.key] || ""}
+              onChange={(e) => setAnswer(question.other.key, e.target.value)}
+              placeholder={question.other.placeholder}
+              className="rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+            />
+          )}
+        </div>
+      )}
+
+      {question.type === "multi" && (
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          {options.map((option) => {
+            const selected = value.includes(option.value);
+            const atLimit = question.max && value.length >= question.max && !selected;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                disabled={atLimit}
+                onClick={() => {
+                  const next = selected
+                    ? value.filter((x) => x !== option.value)
+                    : [...value, option.value];
+                  setAnswer(question.id, next);
+                }}
+                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${atLimit ? "cursor-not-allowed opacity-45" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-sm font-medium leading-6">{option.label}</div>
+                  <div
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      selected ? "border-[#6D39F8] bg-[#6D39F8] text-white" : "border-[#C9C8D1] bg-white text-transparent"
+                    }`}
+                  >
+                    <Check className="h-3 w-3" />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+          {shouldShowOtherField(question, answers) && (
+            <div className="md:col-span-2">
+              <input
+                value={answers[question.other.key] || ""}
+                onChange={(e) => setAnswer(question.other.key, e.target.value)}
+                placeholder={question.other.placeholder}
+                className="w-full rounded-2xl border border-[#D9D8DE] bg-[#FAFAFC] px-4 py-4 text-sm outline-none transition placeholder:text-[#9A9AA4] focus:border-[#6D39F8]"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatValue(question, answers) {
+  const value = answers[question.id];
+  if (!value || (Array.isArray(value) && value.length === 0)) return "—";
+
+  const optionMap = Object.fromEntries((question.options || []).map((opt) => [opt.value, opt.label]));
+
+  if (Array.isArray(value)) {
+    const labels = value.map((v) => {
+      if (v === "other" && question.other) {
+        const otherText = answers[question.other.key]?.trim();
+        return otherText ? `Other: ${otherText}` : "Other";
+      }
+      return optionMap[v] || v;
+    });
+    return labels.join(", ");
+  }
+
+  if (value === "other" && question.other) {
+    const otherText = answers[question.other.key]?.trim();
+    return otherText ? `Other: ${otherText}` : "Other";
+  }
+
+  return optionMap[value] || value;
+}
+
+function getEmailPreview(visibleQuestions, answers) {
+  return visibleQuestions
+    .map((q) => `${q.title}\n${formatValue(q, answers)}`)
+    .join("\n\n");
 }
 
 function getInstantInsights(answers) {
-  const scores = getDimensionScores(answers);
-  const ranked = getSortedDimensions(scores);
-  const weakest = ranked[0];
-  const secondWeakest = ranked[1];
-  const strongest = ranked[ranked.length - 1];
-
   const insights = [];
+  const workType = answers.work_type || [];
+  const friction = answers.friction_points || [];
+  const outcomes = answers.top_outcomes || [];
+  const process = answers.process_structure || "";
+  const writingModel = answers.writing_model || "";
+  const readiness = answers.change_readiness || "";
 
-  if (weakest.key === DIMENSIONS.PROCESS) {
+  if (process === "mostly_adhoc" || process === "depends") {
     insights.push({
-      title: "Your biggest drag likely starts upstream",
-      body: "Your responses suggest that process clarity is creating the most friction. When intake, kickoff, or stage ownership varies by opportunity, drafting and review work become harder to scale.",
+      title: "Process clarity may need attention",
+      body: "The workflow appears to vary meaningfully by opportunity. A session that maps the current process and identifies where structure would help most is likely to add value quickly.",
     });
   }
 
-  if (weakest.key === DIMENSIONS.CONTENT) {
+  if (friction.includes("finding_content") || friction.includes("starting_from_scratch") || friction.includes("version_control")) {
     insights.push({
-      title: "The issue may be content retrieval, not content scarcity",
-      body: "Your responses suggest that existing knowledge may be harder to find, trust, or reuse than it should be. Improving source clarity could reduce unnecessary rebuilding.",
+      title: "Content reuse looks like a meaningful opportunity",
+      body: "There are signs the team may be spending more time than necessary finding, validating, or rebuilding source content.",
     });
   }
 
-  if (weakest.key === DIMENSIONS.COLLAB) {
+  if (friction.includes("sme_delays") || writingModel === "smes_write_edit" || writingModel === "distributed") {
     insights.push({
-      title: "Collaboration flow appears to be shaping delivery speed",
-      body: "Your responses suggest that SME input, review cycles, or ownership handoffs may be slowing progress more than the writing itself.",
+      title: "SME collaboration may be shaping delivery speed",
+      body: "Subject matter expert input likely has a major impact on pace and consistency. Clarifying contribution methods and handoffs may reduce drag.",
     });
   }
 
-  if (weakest.key === DIMENSIONS.COMPLIANCE) {
+  if (friction.includes("review_comments") || friction.includes("ownership_coordination")) {
     insights.push({
-      title: "Confidence may depend on stronger requirements traceability",
-      body: "Your responses suggest that requirement identification or validation could benefit from a more structured method, especially for compliance-heavy work.",
+      title: "Review flow may be creating avoidable friction",
+      body: "Review cycles, comment consolidation, or ownership visibility may be slowing the process more than necessary.",
     });
   }
 
-  if (weakest.key === DIMENSIONS.ENABLEMENT) {
+  if (workType.some((x) => ["federal", "grants"].includes(x)) || friction.includes("requirement_tracking") || outcomes.includes("compliance")) {
     insights.push({
-      title: "Execution support may be the unlock",
-      body: "Your responses suggest that the team may not need a full reset so much as clearer guidance, better prompts, and more practical role-based enablement.",
+      title: "Compliance support may be a priority area",
+      body: "Requirements tracking, compliance confidence, or structured validation appear important enough to emphasize in follow-up planning.",
     });
   }
 
-  // Dependency / imbalance insight
-  if (
-    weakest.key === DIMENSIONS.PROCESS &&
-    secondWeakest.key === DIMENSIONS.COLLAB
-  ) {
+  if (outcomes.includes("speed") || friction.includes("formatting_final_assembly")) {
     insights.push({
-      title: "Review friction may be a symptom, not the root cause",
-      body: "The pattern in your responses suggests that review and coordination issues may be driven partly by inconsistent workflow structure upstream.",
-    });
-  } else if (
-    weakest.key === DIMENSIONS.CONTENT &&
-    secondWeakest.key === DIMENSIONS.ENABLEMENT
-  ) {
-    insights.push({
-      title: "Better reuse may require better working habits",
-      body: "Your responses suggest that content issues are not only about storage. Prompting habits, source selection, and practical guidance may also be affecting reuse.",
-    });
-  } else if (
-    weakest.key === DIMENSIONS.COMPLIANCE &&
-    secondWeakest.key === DIMENSIONS.PROCESS
-  ) {
-    insights.push({
-      title: "Compliance risk may be tied to workflow discipline",
-      body: "Your responses suggest that stronger requirement control will likely depend on clearer steps earlier in the process, not just better checking at the end.",
-    });
-  } else {
-    insights.push({
-      title: "The pattern looks operational, not isolated",
-      body: `Your responses suggest that ${DIMENSION_LABELS[weakest.key].toLowerCase()} is the clearest gap, but it also appears connected to ${DIMENSION_LABELS[secondWeakest.key].toLowerCase()}.`,
+      title: "Turnaround time likely matters",
+      body: "There may be an opportunity to reduce cycle time by improving drafting, handoff, or final production steps.",
     });
   }
 
-  // Strength-based insight
-  if (strongest.key === DIMENSIONS.PROCESS) {
+  if (readiness === "cautious" || readiness === "mixed" || readiness === "resistant") {
     insights.push({
-      title: "There is a strong foundation to build from",
-      body: "Your responses suggest there is already some process discipline in place. That makes targeted improvements easier to implement without broad disruption.",
+      title: "Adoption may need a pragmatic approach",
+      body: "The team may benefit from practical, role-specific changes rather than a large process reset.",
     });
-  } else if (strongest.key === DIMENSIONS.CONTENT) {
+  }
+
+  if (insights.length === 0) {
     insights.push({
-      title: "Existing content may be a hidden asset",
-      body: "Your responses suggest the team likely has useful content foundations. Better retrieval and application could create value quickly.",
-    });
-  } else if (strongest.key === DIMENSIONS.COLLAB) {
-    insights.push({
-      title: "Team coordination may be an asset you can leverage",
-      body: "Your responses suggest there is already a workable level of collaboration in place, which should make focused workflow improvements easier to land.",
-    });
-  } else if (strongest.key === DIMENSIONS.COMPLIANCE) {
-    insights.push({
-      title: "Control discipline appears to be a relative strength",
-      body: "Your responses suggest that compliance awareness is more established than some other areas, which is a strong base for broader optimisation.",
-    });
-  } else {
-    insights.push({
-      title: "The team appears open to improvement",
-      body: "Your responses suggest there is enough readiness to support practical changes without requiring a major transformation programme.",
+      title: "Your responses provide a strong starting point",
+      body: "The diagnostic suggests a relatively stable baseline, which will help focus the session on targeted improvements rather than broad discovery.",
     });
   }
 
@@ -383,137 +640,261 @@ function getInstantInsights(answers) {
 }
 
 function getALPPreview(answers) {
-  const scores = getDimensionScores(answers);
-  const ranked = getSortedDimensions(scores);
-  const weakestThree = ranked.slice(0, 3).map((item) => item.key);
-
-  const focusAreas = weakestThree.map((dimensionKey, index) => {
-    const config = FOCUS_AREA_LIBRARY[dimensionKey];
-    return {
-      priority: index + 1,
-      title: config.title,
-      sessionType: config.sessionType,
-      why: config.why,
-      urgency: index === 0 ? "Now" : index === 1 ? "Next" : "Later",
-    };
-  });
-
+  const workType = answers.work_type || [];
+  const friction = answers.friction_points || [];
   const outcomes = answers.top_outcomes || [];
+  const support = answers.support_needs || [];
+  const urgent = answers.urgent_issue || "";
+
+  const focusAreas = [];
+
+  if (friction.includes("finding_content") || friction.includes("starting_from_scratch") || friction.includes("version_control")) {
+    focusAreas.push("Content organization and reuse workflow");
+  }
+  if (friction.includes("sme_delays")) {
+    focusAreas.push("SME contribution model and handoff design");
+  }
+  if (friction.includes("review_comments") || friction.includes("ownership_coordination")) {
+    focusAreas.push("Review cycle structure and ownership clarity");
+  }
+  if (friction.includes("requirement_tracking") || workType.some((x) => ["federal", "grants"].includes(x))) {
+    focusAreas.push("Requirements tracking and compliance confidence");
+  }
+  if (friction.includes("formatting_final_assembly") || outcomes.includes("speed")) {
+    focusAreas.push("Production efficiency and turnaround reduction");
+  }
+  if (support.includes("training") || support.includes("platform_usage") || support.includes("prompts")) {
+    focusAreas.push("Targeted enablement, prompts, and role-based guidance");
+  }
+
+  const uniqueFocusAreas = [...new Set(focusAreas)].slice(0, 4);
 
   const objectives = [
-    `Address the most urgent issue identified: ${humanizeUrgentIssue(answers)}.`,
-    outcomes.includes("speed")
-      ? "Reduce cycle time by identifying where work can be standardised or accelerated."
-      : "Reduce workflow drag by clarifying where repeatable structure would help most.",
-    outcomes.includes("quality") || outcomes.includes("compliance")
-      ? "Improve confidence in quality, consistency, and response rigor."
-      : "Improve consistency and make it easier for the team to apply best practice under pressure.",
+    urgent ? `Address the most urgent issue identified: ${urgent.replaceAll("_", " ")}.` : "Prioritize the highest-friction area surfaced in the diagnostic.",
+    outcomes.includes("speed") ? "Reduce cycle time by identifying where work can be standardized or accelerated." : "Clarify where workflow improvements can reduce drag.",
+    outcomes.includes("quality") || outcomes.includes("compliance") ? "Improve confidence in quality, consistency, and response rigor." : "Increase consistency across the response process.",
   ];
 
   const recommendations = [
-    `Start with ${focusAreas[0]?.title.toLowerCase() || "the primary friction point surfaced in the diagnostic"}.`,
-    "Use one or two recent live examples to anchor the discussion in real work.",
-    "Convert the discussion into a practical next-step plan with visible ownership.",
+    uniqueFocusAreas[0] ? `Start the session with a focused discussion on ${uniqueFocusAreas[0].toLowerCase()}.` : "Start with a focused discussion on the most time-consuming step in the current workflow.",
+    "Use one or two recent live examples to ground the discussion in real work.",
+    "Translate findings into a practical follow-up plan with specific owners or next steps.",
   ];
 
   return {
-    title: answers.company_name
-      ? `Draft Advanced Learning Plan for ${answers.company_name}`
-      : "Draft Advanced Learning Plan",
+    title: answers.company_name ? `Draft ALP for ${answers.company_name}` : "Draft Advanced Learning Plan",
     objectives,
-    focusAreas,
+    focusAreas: uniqueFocusAreas.length ? uniqueFocusAreas : ["Workflow mapping", "Role-based enablement", "Targeted process improvements"],
     recommendations,
   };
 }
 
-function getAcademyRecommendations(answers) {
-  const scores = getDimensionScores(answers);
-  const ranked = getSortedDimensions(scores);
-  const priorities = ranked.slice(0, 3).map((item) => item.key);
+export default function CSMDiscussionGuide() {
+  const CONTACT_EMAIL = "derek.gatlin@autogenai.com";
+  const [answers, setAnswers] = useState({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [maxStepsSeen, setMaxStepsSeen] = useState(questions.length);
 
-  const scoredResources = ACADEMY_RESOURCES.map((resource) => {
-    let score = 0;
+  const visibleQuestions = useMemo(() => getVisibleQuestions(answers), [answers]);
+  const currentQuestion = visibleQuestions[currentIndex];
+  const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
+  const instantInsights = useMemo(() => getInstantInsights(answers), [answers]);
+  const alpPreview = useMemo(() => getALPPreview(answers), [answers]);
 
-    priorities.forEach((priority, index) => {
-      if (resource.dimensions.includes(priority)) {
-        score += index === 0 ? 5 : index === 1 ? 3 : 2;
+  useEffect(() => {
+    setMaxStepsSeen((prev) => Math.max(prev, visibleQuestions.length));
+  }, [visibleQuestions.length]);
+
+  const setAnswer = (key, value) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const canContinue = currentQuestion ? isAnswered(currentQuestion, answers) : false;
+  const isLast = currentIndex === visibleQuestions.length - 1;
+
+  const next = () => {
+    if (isLast) {
+      setSubmitted(true);
+      return;
+    }
+    setCurrentIndex((prev) => Math.min(prev + 1, visibleQuestions.length - 1));
+  };
+
+  const back = () => setCurrentIndex((prev) => Math.max(prev - 1, 0));
+
+  if (submitted) {
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(emailPreview);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (e) {
+        console.error(e);
       }
-    });
+    };
 
-    if (resource.level === "foundational") score += 1;
+    return (
+      <div className="min-h-screen bg-[#F2F1F4] px-4 py-8 text-[#120F0D] md:px-8">
+        <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Diagnostic summary ready
+          </div>
 
-    return { ...resource, matchScore: score };
-  });
+          <h1 className="text-3xl font-semibold tracking-tight">Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready</h1>
 
-  const selected = scoredResources
-    .sort((a, b) => b.matchScore - a.matchScore)
-    .filter((resource, index, arr) => arr.findIndex((x) => x.key === resource.key) === index)
-    .slice(0, 3)
-    .map((resource, index) => ({
-      ...resource,
-      tag:
-        index === 0
-          ? "Best next step"
-          : index === 1
-            ? "Strong gap match"
-            : "Builds momentum",
-    }));
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
+            We will use this information to prepare a tailored session focused on your team’s priorities.
+          </p>
 
-  return selected;
-}
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Instant insights</div>
+            <div className="space-y-3">
+              {instantInsights.map((insight, index) => (
+                <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+                  <div className="text-sm font-semibold text-[#120F0D]">{insight.title}</div>
+                  <div className="mt-1 text-sm leading-6 text-[#60606B]">{insight.body}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-function getDiagnosticSummaryText(visibleQuestions, answers) {
-  const scores = getDimensionScores(answers);
-  const snapshot = getSnapshotSummary(answers, scores);
-  const insights = getInstantInsights(answers);
-  const alp = getALPPreview(answers);
-  const resources = getAcademyRecommendations(answers);
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Draft ALP preview</div>
+            <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+              <div className="text-sm font-semibold text-[#120F0D]">{alpPreview.title}</div>
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Objectives</div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.objectives.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Suggested focus areas</div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.focusAreas.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Recommended next steps</div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.recommendations.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+            </div>
+          </div>
 
-  const qaBlock = visibleQuestions
-    .map((q) => `${q.title}\n${formatValue(q, answers)}`)
-    .join("\n\n");
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-2 text-sm font-semibold text-[#120F0D]">Next step</div>
+            <p className="text-sm leading-6 text-[#60606B]">
+              Please open a pre-filled email or copy the summary below and send it to <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>. This allows us to review your inputs and come prepared with specific recommendations.
+            </p>
+          </div>
 
-  const scoreBlock = Object.entries(scores)
-    .map(([key, value]) => `${DIMENSION_LABELS[key]}: ${value}`)
-    .join("\n");
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Diagnostic summary</div>
+            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
+          </div>
 
-  const insightsBlock = insights
-    .map((item, idx) => `${idx + 1}. ${item.title}\n${item.body}`)
-    .join("\n\n");
-
-  const alpBlock = alp.focusAreas
-    .map(
-      (item) =>
-        `${item.priority}. ${item.title} (${item.urgency})\nSession type: ${item.sessionType}\nWhy selected: ${item.why}`
-    )
-    .join("\n\n");
-
-  const resourcesBlock = resources
-    .map(
-      (item, idx) =>
-        `${idx + 1}. ${item.title} [${item.tag}]\n${item.description}\n${item.url}`
-    )
-    .join("\n\n");
-
-  return `Diagnostic Summary
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`)}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
 
 Company: ${answers.company_name || "N/A"}
-Maturity Signal: ${snapshot.maturity}
-Biggest Opportunity Area: ${snapshot.biggestOpportunity}
-Recommended Next Step: ${snapshot.nextStep}
+Contact: ${answers.contact_email || "N/A"}
 
-Dimension Scores
-${scoreBlock}
+----------------------------------------
 
-3 Instant Insights
-${insightsBlock}
+${emailPreview}`)}`}
+              className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+            >
+              Open email draft
+            </a>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+            >
+              {copied ? "Copied ✓" : "Copy summary"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setCurrentIndex(0);
+              }}
+              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+            >
+              Review responses
+            </button>
+          </div>
 
-Draft Advanced Learning Plan
-${alpBlock}
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">What happens next</div>
+            <ul className="space-y-2 text-sm leading-6 text-[#60606B]">
+              <li>We review your responses and identify key opportunities.</li>
+              <li>We prepare a focused session tailored to your workflow.</li>
+              <li>We come ready with practical recommendations you can apply quickly.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-Top 3 Recommended Academy Resources
-${resourcesBlock}
+  return (
+    <div className="min-h-screen bg-[#F2F1F4] text-[#120F0D]">
+      <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-12">
+        <div className="mb-8 rounded-[30px] border border-[#D9D8DE] bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Pre-Workshop Diagnostic
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Help us tailor your session</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
+            This short diagnostic is designed to gather light, structured input before your session. Most responses are point-and-click, with optional type fields when you choose Other.
+          </p>
+        </div>
 
-Questionnaire Responses
-${qaBlock}`;
+        <div className="grid gap-6 lg:grid-cols-[1fr,320px]">
+          <div>
+            <ProgressBar current={currentIndex + 1} total={maxStepsSeen} />
+            {currentQuestion && (
+              <QuestionRenderer question={currentQuestion} answers={answers} setAnswer={setAnswer} />
+            )}
+
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={back}
+                disabled={currentIndex === 0}
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#60606B] transition disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+
+              <button
+                type="button"
+                onClick={next}
+                disabled={!canContinue}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isLast ? "Generate Diagnostic Summary" : "Continue"}
+                {!isLast && <ChevronRight className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <aside className="rounded-[28px] border border-[#D9D8DE] bg-white p-5 shadow-sm">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Current response preview</div>
+            <div className="max-h-[520px] overflow-auto rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4 text-sm leading-6 text-[#27272F]">
+              {visibleQuestions.slice(0, currentIndex + 1).map((q) => (
+                <div key={q.id} className="mb-4 last:mb-0">
+                  <div className="font-semibold text-[#120F0D]">{q.title}</div>
+                  <div className="mt-1 text-[#60606B]">{formatValue(q, answers)}</div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
 }
