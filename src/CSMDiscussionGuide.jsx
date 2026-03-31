@@ -23,6 +23,24 @@ const styles = {
   chipBg: "#FAFAFC",
 };
 
+<style>{`
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    body {
+      background: white !important;
+    }
+
+    .print-card {
+      box-shadow: none !important;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
+`}</style>
+
 const ROUTES = {
   CONTENT: ["finding_content", "starting_from_scratch", "version_control"],
   SME: ["sme_delays"],
@@ -724,6 +742,10 @@ export default function CSMDiscussionGuide() {
 
   const back = () => setCurrentIndex((prev) => Math.max(prev - 1, 0));
 
+  const handlePrint = () => {
+  window.print();
+  };
+  
   if (submitted) {
     const handleCopy = async () => {
       try {
@@ -736,105 +758,176 @@ export default function CSMDiscussionGuide() {
     };
 
     return (
-      <div className="min-h-screen bg-[#F2F1F4] px-4 py-8 text-[#120F0D] md:px-8">
-        <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
-            <Sparkles className="h-3.5 w-3.5" />
-            Diagnostic summary ready
-          </div>
+      if (submitted) {
+  return (
+    <div className="min-h-screen bg-[#F5F5F7] px-4 py-10">
+      <style>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
 
-          <h1 className="text-3xl font-semibold tracking-tight">Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready</h1>
+          body {
+            background: white !important;
+          }
 
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
-            We will use this information to prepare a tailored session focused on your team’s priorities.
+          .print-card {
+            box-shadow: none !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+
+      <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+          <Sparkles className="h-3.5 w-3.5" />
+          Diagnostic summary ready
+        </div>
+
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready
+        </h1>
+
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
+          This summary captures your inputs and highlights key themes to support a focused follow-up discussion.
+        </p>
+
+        {/* IMPORTANT: NOT STORED NOTE */}
+        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+          <div className="mb-2 text-sm font-semibold text-[#120F0D]">Save and send your results</div>
+
+          <p className="text-sm leading-6 text-[#60606B]">
+            Your responses are not stored in this tool. To keep a copy of your results, please save this page as a PDF and then open the pre-filled email draft below to send the summary to <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
           </p>
 
-          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Instant insights</div>
-            <div className="space-y-3">
-              {instantInsights.map((insight, index) => (
-                <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
-                  <div className="text-sm font-semibold text-[#120F0D]">{insight.title}</div>
-                  <div className="mt-1 text-sm leading-6 text-[#60606B]">{insight.body}</div>
+          <p className="mt-3 text-sm leading-6 text-[#60606B]">
+            If you leave or refresh this page before saving or emailing, your responses will be cleared.
+          </p>
+        </div>
+
+        {/* INSIGHTS */}
+        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+            3 instant insights
+          </div>
+
+          <div className="space-y-3">
+            {instantInsights.map((insight, index) => (
+              <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+                <div className="text-sm font-semibold text-[#120F0D]">
+                  {index + 1}. {insight.title}
+                </div>
+                <div className="mt-1 text-sm leading-6 text-[#60606B]">
+                  {insight.body}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ALP */}
+        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+            Draft Advanced Learning Plan
+          </div>
+
+          <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+            <div className="text-sm font-semibold text-[#120F0D]">{alpPreview.title}</div>
+
+            <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+              Objectives
+            </div>
+            <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+              {alpPreview.objectives.map((item, index) => (
+                <li key={index}>• {item}</li>
+              ))}
+            </ul>
+
+            <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+              Focus areas
+            </div>
+            <div className="mt-2 space-y-3">
+              {alpPreview.focusAreas.map((item) => (
+                <div key={item.title} className="rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4">
+                  <div className="text-sm font-semibold text-[#120F0D]">
+                    {item.title}
+                  </div>
+                  <div className="mt-1 text-sm text-[#60606B]">
+                    <span className="font-medium text-[#120F0D]">Session type:</span> {item.sessionType}
+                  </div>
+                  <div className="mt-2 text-sm leading-6 text-[#60606B]">{item.why}</div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Draft ALP preview</div>
-            <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
-              <div className="text-sm font-semibold text-[#120F0D]">{alpPreview.title}</div>
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Objectives</div>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
-                {alpPreview.objectives.map((item, index) => <li key={index}>• {item}</li>)}
-              </ul>
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Suggested focus areas</div>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
-                {alpPreview.focusAreas.map((item, index) => <li key={index}>• {item}</li>)}
-              </ul>
-              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Recommended next steps</div>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
-                {alpPreview.recommendations.map((item, index) => <li key={index}>• {item}</li>)}
-              </ul>
+            <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+              Recommendations
             </div>
+            <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+              {alpPreview.recommendations.map((item, index) => (
+                <li key={index}>• {item}</li>
+              ))}
+            </ul>
           </div>
+        </div>
 
-          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
-            <div className="mb-2 text-sm font-semibold text-[#120F0D]">Next step</div>
-            <p className="text-sm leading-6 text-[#60606B]">
-              Please open a pre-filled email or copy the summary below and send it to <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>. This allows us to review your inputs and come prepared with specific recommendations.
-            </p>
-          </div>
+        {/* BUTTONS */}
+        <div className="mt-6 flex flex-wrap items-center gap-3 no-print">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+          >
+            Save as PDF
+          </button>
 
-          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Diagnostic summary</div>
-            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`)}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`)}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
 
 Company: ${answers.company_name || "N/A"}
-Contact: ${answers.contact_email || "N/A"}
 
 ----------------------------------------
 
 ${emailPreview}`)}`}
-              className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-            >
-              Open email draft
-            </a>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-            >
-              {copied ? "Copied ✓" : "Copy summary"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitted(false);
-                setCurrentIndex(0);
-              }}
-              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-            >
-              Review responses
-            </button>
-          </div>
+            className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+          >
+            Open email draft
+          </a>
 
-          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">What happens next</div>
-            <ul className="space-y-2 text-sm leading-6 text-[#60606B]">
-              <li>We review your responses and identify key opportunities.</li>
-              <li>We prepare a focused session tailored to your workflow.</li>
-              <li>We come ready with practical recommendations you can apply quickly.</li>
-            </ul>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+          >
+            {copied ? "Copied ✓" : "Copy summary"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitted(false);
+              setCurrentIndex(0);
+            }}
+            className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+          >
+            Review responses
+          </button>
+        </div>
+
+        {/* RAW SUMMARY */}
+        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5 print-card">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+            Diagnostic summary
           </div>
+          <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">
+            {emailPreview}
+          </pre>
         </div>
       </div>
+    </div>
+  );
+}
     );
   }
 
@@ -849,6 +942,9 @@ ${emailPreview}`)}`}
           <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Help us tailor your session</h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
             This short diagnostic is designed to gather light, structured input before your session. Most responses are point-and-click, with optional type fields when you choose Other.
+          </p>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-[#60606B]">
+            Responses are not stored in this tool. If you want to keep a copy at the end, please save the final summary as a PDF and email it before closing or refreshing the page.
           </p>
         </div>
 
