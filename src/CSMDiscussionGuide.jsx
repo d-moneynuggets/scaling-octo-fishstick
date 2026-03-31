@@ -23,7 +23,7 @@ const styles = {
   chipBg: "#FAFAFC",
 };
 
-<style>{`
+const PRINT_STYLES = `
   @media print {
     .no-print {
       display: none !important;
@@ -39,7 +39,7 @@ const styles = {
       page-break-inside: avoid;
     }
   }
-`}</style>
+`;
 
 const ROUTES = {
   CONTENT: ["finding_content", "starting_from_scratch", "version_control"],
@@ -378,8 +378,19 @@ function getVisibleQuestions(answers) {
     if (q.branch === "content" && friction.some((x) => ROUTES.CONTENT.includes(x))) visible.push(q);
     if (q.branch === "sme" && friction.some((x) => ROUTES.SME.includes(x))) visible.push(q);
     if (q.branch === "review" && friction.some((x) => ROUTES.REVIEW.includes(x))) visible.push(q);
-    if (q.branch === "compliance" && (friction.some((x) => ROUTES.COMPLIANCE.includes(x)) || workType.some((x) => ["federal", "grants"].includes(x)))) visible.push(q);
-    if (q.branch === "production" && (friction.some((x) => ROUTES.PRODUCTION.includes(x)) || answers.top_outcomes?.includes("speed"))) visible.push(q);
+    if (
+      q.branch === "compliance" &&
+      (friction.some((x) => ROUTES.COMPLIANCE.includes(x)) ||
+        workType.some((x) => ["federal", "grants"].includes(x)))
+    ) {
+      visible.push(q);
+    }
+    if (
+      q.branch === "production" &&
+      (friction.some((x) => ROUTES.PRODUCTION.includes(x)) || answers.top_outcomes?.includes("speed"))
+    ) {
+      visible.push(q);
+    }
     if (q.branch === "rfi" && workType.some((x) => ["rfi_questionnaires"].includes(x))) visible.push(q);
   }
 
@@ -424,7 +435,9 @@ function ProgressBar({ current, total }) {
     <div className="mb-8">
       <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#60606B]">
         <span>Progress</span>
-        <span>{current} of {total}</span>
+        <span>
+          {current} of {total}
+        </span>
       </div>
       <div className="h-2 rounded-full bg-[#E7E7EC]">
         <div
@@ -522,12 +535,12 @@ function QuestionRenderer({ question, answers, setAnswer }) {
                 type="button"
                 disabled={atLimit}
                 onClick={() => {
-                  const next = selected
-                    ? value.filter((x) => x !== option.value)
-                    : [...value, option.value];
+                  const next = selected ? value.filter((x) => x !== option.value) : [...value, option.value];
                   setAnswer(question.id, next);
                 }}
-                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${atLimit ? "cursor-not-allowed opacity-45" : ""}`}
+                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${
+                  atLimit ? "cursor-not-allowed opacity-45" : ""
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="text-sm font-medium leading-6">{option.label}</div>
@@ -584,9 +597,7 @@ function formatValue(question, answers) {
 }
 
 function getEmailPreview(visibleQuestions, answers) {
-  return visibleQuestions
-    .map((q) => `${q.title}\n${formatValue(q, answers)}`)
-    .join("\n\n");
+  return visibleQuestions.map((q) => `${q.title}\n${formatValue(q, answers)}`).join("\n\n");
 }
 
 function getInstantInsights(answers) {
@@ -605,7 +616,11 @@ function getInstantInsights(answers) {
     });
   }
 
-  if (friction.includes("finding_content") || friction.includes("starting_from_scratch") || friction.includes("version_control")) {
+  if (
+    friction.includes("finding_content") ||
+    friction.includes("starting_from_scratch") ||
+    friction.includes("version_control")
+  ) {
     insights.push({
       title: "Content reuse looks like a meaningful opportunity",
       body: "There are signs the team may be spending more time than necessary finding, validating, or rebuilding source content.",
@@ -626,7 +641,11 @@ function getInstantInsights(answers) {
     });
   }
 
-  if (workType.some((x) => ["federal", "grants"].includes(x)) || friction.includes("requirement_tracking") || outcomes.includes("compliance")) {
+  if (
+    workType.some((x) => ["federal", "grants"].includes(x)) ||
+    friction.includes("requirement_tracking") ||
+    outcomes.includes("compliance")
+  ) {
     insights.push({
       title: "Compliance support may be a priority area",
       body: "Requirements tracking, compliance confidence, or structured validation appear important enough to emphasize in follow-up planning.",
@@ -666,7 +685,11 @@ function getALPPreview(answers) {
 
   const focusAreas = [];
 
-  if (friction.includes("finding_content") || friction.includes("starting_from_scratch") || friction.includes("version_control")) {
+  if (
+    friction.includes("finding_content") ||
+    friction.includes("starting_from_scratch") ||
+    friction.includes("version_control")
+  ) {
     focusAreas.push("Content organization and reuse workflow");
   }
   if (friction.includes("sme_delays")) {
@@ -688,13 +711,21 @@ function getALPPreview(answers) {
   const uniqueFocusAreas = [...new Set(focusAreas)].slice(0, 4);
 
   const objectives = [
-    urgent ? `Address the most urgent issue identified: ${urgent.replaceAll("_", " ")}.` : "Prioritize the highest-friction area surfaced in the diagnostic.",
-    outcomes.includes("speed") ? "Reduce cycle time by identifying where work can be standardized or accelerated." : "Clarify where workflow improvements can reduce drag.",
-    outcomes.includes("quality") || outcomes.includes("compliance") ? "Improve confidence in quality, consistency, and response rigor." : "Increase consistency across the response process.",
+    urgent
+      ? `Address the most urgent issue identified: ${urgent.replaceAll("_", " ")}.`
+      : "Prioritize the highest-friction area surfaced in the diagnostic.",
+    outcomes.includes("speed")
+      ? "Reduce cycle time by identifying where work can be standardized or accelerated."
+      : "Clarify where workflow improvements can reduce drag.",
+    outcomes.includes("quality") || outcomes.includes("compliance")
+      ? "Improve confidence in quality, consistency, and response rigor."
+      : "Increase consistency across the response process.",
   ];
 
   const recommendations = [
-    uniqueFocusAreas[0] ? `Start the session with a focused discussion on ${uniqueFocusAreas[0].toLowerCase()}.` : "Start with a focused discussion on the most time-consuming step in the current workflow.",
+    uniqueFocusAreas[0]
+      ? `Start the session with a focused discussion on ${uniqueFocusAreas[0].toLowerCase()}.`
+      : "Start with a focused discussion on the most time-consuming step in the current workflow.",
     "Use one or two recent live examples to ground the discussion in real work.",
     "Translate findings into a practical follow-up plan with specific owners or next steps.",
   ];
@@ -702,7 +733,9 @@ function getALPPreview(answers) {
   return {
     title: answers.company_name ? `Draft ALP for ${answers.company_name}` : "Draft Advanced Learning Plan",
     objectives,
-    focusAreas: uniqueFocusAreas.length ? uniqueFocusAreas : ["Workflow mapping", "Role-based enablement", "Targeted process improvements"],
+    focusAreas: uniqueFocusAreas.length
+      ? uniqueFocusAreas
+      : ["Workflow mapping", "Role-based enablement", "Targeted process improvements"],
     recommendations,
   };
 }
@@ -743,9 +776,9 @@ export default function CSMDiscussionGuide() {
   const back = () => setCurrentIndex((prev) => Math.max(prev - 1, 0));
 
   const handlePrint = () => {
-  window.print();
+    window.print();
   };
- if (submitted) {
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(emailPreview);
@@ -756,229 +789,150 @@ export default function CSMDiscussionGuide() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] px-4 py-10">
+        <style>{PRINT_STYLES}</style>
 
-  return (
-    <div className="min-h-screen bg-[#F5F5F7] px-4 py-10">
-      <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-
-          body {
-            background: white !important;
-          }
-
-          .print-card {
-            box-shadow: none !important;
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-        }
-      `}</style>
-
-      <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready
-        </h1>
-
-        <p className="mt-3 text-sm leading-6 text-[#60606B]">
-          This summary captures your inputs and highlights key themes to support a focused follow-up discussion.
-        </p>
-
-        {/* NOT STORED MESSAGE */}
-        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
-          <div className="mb-2 text-sm font-semibold text-[#120F0D]">
-            Save and send your results
+        <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Diagnostic summary ready
           </div>
 
-          <p className="text-sm leading-6 text-[#60606B]">
-            Your responses are not stored in this tool. To keep a copy of your results,
-            please save this page as a PDF and then open the email draft below to send
-            the summary to{" "}
-            <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready
+          </h1>
 
           <p className="mt-3 text-sm leading-6 text-[#60606B]">
-            If you leave or refresh this page before saving or emailing, your responses will be cleared.
+            This summary captures your inputs and highlights key themes to support a focused follow-up discussion.
           </p>
-        </div>
 
-        {/* INSIGHTS */}
-        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">
-            3 instant insights
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+            <div className="mb-2 text-sm font-semibold text-[#120F0D]">Save and send your results</div>
+
+            <p className="text-sm leading-6 text-[#60606B]">
+              Your responses are not stored in this tool. To keep a copy of your results, please save this page as a
+              PDF and then open the pre-filled email draft below to send the summary to{" "}
+              <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
+            </p>
+
+            <p className="mt-3 text-sm leading-6 text-[#60606B]">
+              If you leave or refresh this page before saving or emailing, your responses will be cleared.
+            </p>
           </div>
 
-          <div className="space-y-3">
-            {instantInsights.map((insight, index) => (
-              <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
-                <div className="text-sm font-semibold">{index + 1}. {insight.title}</div>
-                <div className="text-sm text-[#60606B] mt-1">{insight.body}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">3 instant insights</div>
 
-        {/* ALP */}
-        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
-          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">
-            Draft Advanced Learning Plan
-          </div>
-
-          <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
-            <div className="text-sm font-semibold">{alpPreview.title}</div>
-
-            <ul className="mt-3 space-y-2 text-sm text-[#60606B]">
-              {alpPreview.objectives.map((item, i) => (
-                <li key={i}>• {item}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* BUTTONS */}
-        <div className="mt-6 flex gap-3 flex-wrap no-print">
-          <button
-            onClick={handlePrint}
-            className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-white text-sm font-semibold"
-          >
-            Save as PDF
-          </button>
-
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Diagnostic Summary")}&body=${encodeURIComponent(emailPreview)}`}
-            className="rounded-2xl border border-[#D9D8DE] px-5 py-3 text-sm font-semibold"
-          >
-            Open email draft
-          </a>
-
-          <button
-            onClick={handleCopy}
-            className="rounded-2xl border border-[#D9D8DE] px-5 py-3 text-sm font-semibold"
-          >
-            {copied ? "Copied ✓" : "Copy summary"}
-          </button>
-        </div>
-
-        {/* RAW TEXT */}
-        <div className="mt-6 border rounded-3xl p-5 print-card">
-          <pre className="whitespace-pre-wrap text-sm">{emailPreview}</pre>
-        </div>
-      </div>
-    </div>
-  );
-}
-        {/* Advanced Learning Plan */}
-        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
-            Draft Advanced Learning Plan
-          </div>
-
-          <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
-            <div className="text-sm font-semibold text-[#120F0D]">{alpPreview.title}</div>
-
-            <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
-              Objectives
-            </div>
-            <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
-              {alpPreview.objectives.map((item, index) => (
-                <li key={index}>• {item}</li>
-              ))}
-            </ul>
-
-            <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
-              Focus areas
-            </div>
-            <div className="mt-2 space-y-3">
-              {alpPreview.focusAreas.map((item) => (
-                <div key={item.title} className="rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4">
-                  <div className="text-sm font-semibold text-[#120F0D]">
-                    {item.title}
+            <div className="space-y-3">
+              {instantInsights.map((insight, index) => (
+                <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+                  <div className="text-sm font-semibold">
+                    {index + 1}. {insight.title}
                   </div>
-                  <div className="mt-1 text-sm text-[#60606B]">
-                    <span className="font-medium text-[#120F0D]">Session type:</span> {item.sessionType}
-                  </div>
-                  <div className="mt-2 text-sm leading-6 text-[#60606B]">{item.why}</div>
+                  <div className="mt-1 text-sm text-[#60606B]">{insight.body}</div>
                 </div>
               ))}
             </div>
-
-            <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
-              Recommendations
-            </div>
-            <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
-              {alpPreview.recommendations.map((item, index) => (
-                <li key={index}>• {item}</li>
-              ))}
-            </ul>
           </div>
-        </div>
 
-        {/* BUTTONS */}
-        <div className="mt-6 flex flex-wrap items-center gap-3 no-print">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-          >
-            Save as PDF
-          </button>
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">
+              Draft Advanced Learning Plan
+            </div>
 
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`)}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
+            <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+              <div className="text-sm font-semibold">{alpPreview.title}</div>
+
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+                Objectives
+              </div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.objectives.map((item, index) => (
+                  <li key={index}>• {item}</li>
+                ))}
+              </ul>
+
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+                Focus areas
+              </div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.focusAreas.map((item, index) => (
+                  <li key={index}>• {item}</li>
+                ))}
+              </ul>
+
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+                Recommendations
+              </div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.recommendations.map((item, index) => (
+                  <li key={index}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3 no-print">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+            >
+              Save as PDF
+            </button>
+
+            <a
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+                `Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`
+              )}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
 
 Company: ${answers.company_name || "N/A"}
 
 ----------------------------------------
 
 ${emailPreview}`)}`}
-            className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-          >
-            Open email draft
-          </a>
+              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+            >
+              Open email draft
+            </a>
 
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-          >
-            {copied ? "Copied ✓" : "Copy summary"}
-          </button>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+            >
+              {copied ? "Copied ✓" : "Copy summary"}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setSubmitted(false);
-              setCurrentIndex(0);
-            }}
-            className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-          >
-            Review responses
-          </button>
-        </div>
-
-        {/* RAW SUMMARY */}
-        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5 print-card">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
-            Diagnostic summary
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitted(false);
+                setCurrentIndex(0);
+              }}
+              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+            >
+              Review responses
+            </button>
           </div>
-          <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">
-            {emailPreview}
-          </pre>
+
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5 print-card">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+              Diagnostic summary
+            </div>
+            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
     );
   }
 
   return (
     <div className="min-h-screen bg-[#F2F1F4] text-[#120F0D]">
+      <style>{PRINT_STYLES}</style>
+
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-12">
         <div className="mb-8 rounded-[30px] border border-[#D9D8DE] bg-white p-6 shadow-sm md:p-8">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
@@ -987,10 +941,12 @@ ${emailPreview}`)}`}
           </div>
           <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Help us tailor your session</h1>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
-            This short diagnostic is designed to gather light, structured input before your session. Most responses are point-and-click, with optional type fields when you choose Other.
+            This short diagnostic is designed to gather light, structured input before your session. Most responses are
+            point-and-click, with optional type fields when you choose Other.
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-[#60606B]">
-            Responses are not stored in this tool. If you want to keep a copy at the end, please save the final summary as a PDF and email it before closing or refreshing the page.
+            Responses are not stored in this tool. If you want to keep a copy at the end, please save the final summary
+            as a PDF and email it before closing or refreshing the page.
           </p>
         </div>
 
@@ -1025,7 +981,9 @@ ${emailPreview}`)}`}
           </div>
 
           <aside className="rounded-[28px] border border-[#D9D8DE] bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Current response preview</div>
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+              Current response preview
+            </div>
             <div className="max-h-[520px] overflow-auto rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4 text-sm leading-6 text-[#27272F]">
               {visibleQuestions.slice(0, currentIndex + 1).map((q) => (
                 <div key={q.id} className="mb-4 last:mb-0">
