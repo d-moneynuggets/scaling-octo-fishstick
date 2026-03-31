@@ -11,18 +11,6 @@ import {
   Target,
 } from "lucide-react";
 
-const styles = {
-  bg: "#F2F1F4",
-  card: "#FFFFFF",
-  ink: "#120F0D",
-  muted: "#60606B",
-  border: "#D9D8DE",
-  purple: "#6D39F8",
-  purpleSoft: "#ECE8FF",
-  lime: "#D6EA8A",
-  chipBg: "#FAFAFC",
-};
-
 const PRINT_STYLES = `
   @media print {
     .no-print {
@@ -38,6 +26,10 @@ const PRINT_STYLES = `
       break-inside: avoid;
       page-break-inside: avoid;
     }
+
+    a[href]:after {
+      content: "";
+    }
   }
 `;
 
@@ -49,6 +41,58 @@ const ROUTES = {
   PRODUCTION: ["formatting_final_assembly"],
   RFI: ["rfi_questionnaires"],
 };
+
+const ACADEMY_RESOURCES = [
+  {
+    id: "projects_and_drafts",
+    title: "Projects and Drafts",
+    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/4tqTBrK3CBDSbfrsb3KBKoBPJ9F-Wy-t",
+    description: "Useful for structuring work, clarifying ownership, and improving team coordination inside projects.",
+    tags: ["workflow", "collaboration", "review", "ownership"],
+  },
+  {
+    id: "document_library",
+    title: "Document Library",
+    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/EZJ22zJ7pjbcm9S1s5FEWAyA4tGWkDnq",
+    description: "Best for improving content organization, findability, and reuse of trusted source material.",
+    tags: ["content", "reuse", "finding_content", "version_control"],
+  },
+  {
+    id: "extract",
+    title: "Interrogating Client Documents with Extract",
+    url: "https://rise.articulate.com/share/IVZTAUM-E3jOmZcKQNZitftolS5vjdrD",
+    description: "Helpful for identifying requirements, analyzing source documents, and strengthening compliance tracking.",
+    tags: ["compliance", "requirements", "requirement_tracking", "federal", "grants"],
+  },
+  {
+    id: "editor",
+    title: "Editor",
+    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/ft_J-Bz_Z0I8iVhtx9gpJOTBMfMMxkzz",
+    description: "Useful when teams need cleaner drafting, refinement, and final editing workflows.",
+    tags: ["editing", "quality", "drafting", "production"],
+  },
+  {
+    id: "inputs",
+    title: "Inputs",
+    url: "https://rise.articulate.com/share/QA-y5xk5NxaNYMH0PAAhDdNbcvVd3nDZ#/lessons/S6cpd35Y03Uf_llEiZJ6O9DP-Os6SVgw",
+    description: "A strong fit for better prompting, clearer instructions, and role-based enablement.",
+    tags: ["prompts", "training", "enablement", "platform_usage"],
+  },
+  {
+    id: "qa_workbooks",
+    title: "Q&A Workbooks",
+    url: "https://share.articulate.com/qx3PB6T2xwKNnlhhghLQC#/lessons/Ij_xTosfZKTHjTsWbK1gdFKXi0zUs_xC",
+    description: "Especially relevant for questionnaire-style workflows, RFI responses, and repeatable answer generation.",
+    tags: ["rfi", "rfi_questionnaires", "finding_answers", "consistency", "reuse"],
+  },
+  {
+    id: "gamma_review",
+    title: "Review a Bid with Gamma Review",
+    url: "https://rise.articulate.com/share/0TiXrPF1sACW6blwH_c5MgLK4Xlj04yd",
+    description: "Helpful for review rigor, comment handling, and improving response quality before finalization.",
+    tags: ["review", "quality", "review_comments", "compliance"],
+  },
+];
 
 function otherField(key, label = "Add detail (optional)") {
   return { key, label, placeholder: "Type here..." };
@@ -600,6 +644,162 @@ function getEmailPreview(visibleQuestions, answers) {
   return visibleQuestions.map((q) => `${q.title}\n${formatValue(q, answers)}`).join("\n\n");
 }
 
+function getRecommendedResources(answers) {
+  const friction = answers.friction_points || [];
+  const workType = answers.work_type || [];
+  const support = answers.support_needs || [];
+  const outcomes = answers.top_outcomes || [];
+  const scores = {};
+
+  const addScore = (id, amount) => {
+    scores[id] = (scores[id] || 0) + amount;
+  };
+
+  if (
+    friction.includes("finding_content") ||
+    friction.includes("starting_from_scratch") ||
+    friction.includes("version_control")
+  ) {
+    addScore("document_library", 4);
+  }
+
+  if (outcomes.includes("reuse") || support.includes("content_org")) {
+    addScore("document_library", 3);
+  }
+
+  if (friction.includes("requirement_tracking") || outcomes.includes("compliance")) {
+    addScore("extract", 4);
+    addScore("gamma_review", 2);
+  }
+
+  if (workType.some((x) => ["federal", "grants"].includes(x))) {
+    addScore("extract", 3);
+    addScore("gamma_review", 1);
+  }
+
+  if (friction.includes("review_comments") || friction.includes("ownership_coordination")) {
+    addScore("projects_and_drafts", 3);
+    addScore("gamma_review", 3);
+  }
+
+  if (friction.includes("sme_delays")) {
+    addScore("projects_and_drafts", 3);
+  }
+
+  if (support.includes("collaboration") || outcomes.includes("teamwork")) {
+    addScore("projects_and_drafts", 2);
+  }
+
+  if (friction.includes("training_onboarding") || support.includes("training")) {
+    addScore("inputs", 3);
+  }
+
+  if (support.includes("platform_usage")) {
+    addScore("inputs", 2);
+    addScore("editor", 1);
+  }
+
+  if (support.includes("prompts")) {
+    addScore("inputs", 4);
+  }
+
+  if (friction.includes("formatting_final_assembly") || outcomes.includes("quality")) {
+    addScore("editor", 3);
+  }
+
+  if (workType.includes("rfi_questionnaires")) {
+    addScore("qa_workbooks", 4);
+  }
+
+  const rfiHardest = answers.rfi_hardest || [];
+  if (
+    rfiHardest.includes("finding_answers") ||
+    rfiHardest.includes("consistency") ||
+    rfiHardest.includes("reuse")
+  ) {
+    addScore("qa_workbooks", 3);
+  }
+
+  const ranked = ACADEMY_RESOURCES.map((resource) => ({
+    ...resource,
+    score: scores[resource.id] || 0,
+  }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.title.localeCompare(b.title);
+    })
+    .filter((resource) => resource.score > 0);
+
+  const fallback = [
+    ACADEMY_RESOURCES.find((r) => r.id === "projects_and_drafts"),
+    ACADEMY_RESOURCES.find((r) => r.id === "document_library"),
+    ACADEMY_RESOURCES.find((r) => r.id === "inputs"),
+  ].filter(Boolean);
+
+  const combined = [...ranked, ...fallback];
+  const unique = [];
+  const seen = new Set();
+
+  for (const resource of combined) {
+    if (!seen.has(resource.id)) {
+      seen.add(resource.id);
+      unique.push(resource);
+    }
+    if (unique.length === 3) break;
+  }
+
+  return unique.map((resource, index) => ({
+    ...resource,
+    why:
+      index === 0
+        ? "Most relevant based on the friction and support areas you selected."
+        : index === 1
+          ? "A strong next step that supports the improvement areas surfaced in your responses."
+          : "A helpful supporting resource to build confidence and reinforce good working habits.",
+  }));
+}
+
+function getResultsExportText(visibleQuestions, answers, instantInsights, alpPreview, recommendedResources) {
+  const summaryText = getEmailPreview(visibleQuestions, answers);
+
+  const insightsText = instantInsights
+    .map((insight, index) => `${index + 1}. ${insight.title}\n${insight.body}`)
+    .join("\n\n");
+
+  const alpText = [
+    `${alpPreview.title}`,
+    "",
+    "OBJECTIVES",
+    ...alpPreview.objectives.map((item) => `• ${item}`),
+    "",
+    "FOCUS AREAS",
+    ...alpPreview.focusAreas.map((item) => `• ${item}`),
+    "",
+    "RECOMMENDATIONS",
+    ...alpPreview.recommendations.map((item) => `• ${item}`),
+  ].join("\n");
+
+  const resourceText = recommendedResources
+    .map((resource, index) => {
+      return `${index + 1}. ${resource.title}\n${resource.description}\nWhy this was recommended: ${resource.why}\n${resource.url}`;
+    })
+    .join("\n\n");
+
+  return [
+    "3 INSTANT INSIGHTS",
+    insightsText,
+    "",
+    "DRAFT ADVANCED LEARNING PLAN",
+    alpText,
+    "",
+    "TOP RECOMMENDED ACADEMY RESOURCES",
+    resourceText,
+    "",
+    "DIAGNOSTIC SUMMARY",
+    summaryText,
+  ].join("\n\n");
+}
+
 function getInstantInsights(answers) {
   const insights = [];
   const workType = answers.work_type || [];
@@ -747,16 +947,30 @@ export default function CSMDiscussionGuide() {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [maxStepsSeen, setMaxStepsSeen] = useState(questions.length);
+  const [hasGeneratedSummary, setHasGeneratedSummary] = useState(false);
 
   const visibleQuestions = useMemo(() => getVisibleQuestions(answers), [answers]);
   const currentQuestion = visibleQuestions[currentIndex];
-  const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
   const instantInsights = useMemo(() => getInstantInsights(answers), [answers]);
   const alpPreview = useMemo(() => getALPPreview(answers), [answers]);
+  const recommendedResources = useMemo(() => getRecommendedResources(answers), [answers]);
+  const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
+  const resultsExportText = useMemo(
+    () => getResultsExportText(visibleQuestions, answers, instantInsights, alpPreview, recommendedResources),
+    [visibleQuestions, answers, instantInsights, alpPreview, recommendedResources]
+  );
 
   useEffect(() => {
     setMaxStepsSeen((prev) => Math.max(prev, visibleQuestions.length));
   }, [visibleQuestions.length]);
+
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = "Advanced Learning Plan Diagnostic";
+    return () => {
+      document.title = previousTitle;
+    };
+  }, []);
 
   const setAnswer = (key, value) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -767,6 +981,7 @@ export default function CSMDiscussionGuide() {
 
   const next = () => {
     if (isLast) {
+      setHasGeneratedSummary(true);
       setSubmitted(true);
       return;
     }
@@ -781,7 +996,7 @@ export default function CSMDiscussionGuide() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(emailPreview);
+      await navigator.clipboard.writeText(resultsExportText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
@@ -813,12 +1028,56 @@ export default function CSMDiscussionGuide() {
 
             <p className="text-sm leading-6 text-[#60606B]">
               Your responses are not stored in this tool. To keep a copy of your results, please save this page as a
-              PDF and then open the pre-filled email draft below to send the summary to{" "}
+              PDF and then open the pre-filled email draft below to send the results to{" "}
               <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
             </p>
 
             <p className="mt-3 text-sm leading-6 text-[#60606B]">
               If you leave or refresh this page before saving or emailing, your responses will be cleared.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-3 no-print">
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+              >
+                Save Results as PDF
+              </button>
+
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+                  `Advanced Learning Plan Diagnostic - ${answers.company_name || "New Client"}`
+                )}&body=${encodeURIComponent(resultsExportText)}`}
+                className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+              >
+                Email Results
+              </a>
+
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+              >
+                {copied ? "Copied ✓" : "Copy Results"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitted(false);
+                  setCurrentIndex(0);
+                }}
+                className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+              >
+                Review Responses
+              </button>
+            </div>
+
+            <p className="mt-3 text-xs leading-5 text-[#8B8B95] no-print">
+              Review Responses returns you to the questionnaire from the beginning so you can review or change answers.
+              You can return to this summary at any time using the Return to Summary button while your current responses
+              remain in the browser.
             </p>
           </div>
 
@@ -874,48 +1133,32 @@ export default function CSMDiscussionGuide() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3 no-print">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-            >
-              Save as PDF
-            </button>
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">
+              Top recommended Academy resources
+            </div>
 
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-                `Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`
-              )}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
-
-Company: ${answers.company_name || "N/A"}
-
-----------------------------------------
-
-${emailPreview}`)}`}
-              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-            >
-              Open email draft
-            </a>
-
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-            >
-              {copied ? "Copied ✓" : "Copy summary"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitted(false);
-                setCurrentIndex(0);
-              }}
-              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
-            >
-              Review responses
-            </button>
+            <div className="space-y-3">
+              {recommendedResources.map((resource, index) => (
+                <div key={resource.id} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+                  <div className="text-sm font-semibold">
+                    {index + 1}. {resource.title}
+                  </div>
+                  <div className="mt-1 text-sm text-[#60606B]">{resource.description}</div>
+                  <div className="mt-2 text-sm text-[#60606B]">
+                    <span className="font-medium text-[#120F0D]">Why this was recommended:</span> {resource.why}
+                  </div>
+                  <a
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block text-sm font-medium text-[#6D39F8] underline"
+                  >
+                    Open resource
+                  </a>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5 print-card">
@@ -968,15 +1211,27 @@ ${emailPreview}`)}`}
                 Back
               </button>
 
-              <button
-                type="button"
-                onClick={next}
-                disabled={!canContinue}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isLast ? "Generate Diagnostic Summary" : "Continue"}
-                {!isLast && <ChevronRight className="h-4 w-4" />}
-              </button>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {hasGeneratedSummary && (
+                  <button
+                    type="button"
+                    onClick={() => setSubmitted(true)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-[#D9D8DE] bg-white px-4 py-3 text-sm font-medium text-[#120F0D] transition hover:bg-[#FAFAFC]"
+                  >
+                    Return to Summary
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={next}
+                  disabled={!canContinue}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {isLast ? "Generate Diagnostic Summary" : "Continue"}
+                  {!isLast && <ChevronRight className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
 
