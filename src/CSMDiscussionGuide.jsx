@@ -567,11 +567,8 @@ function formatValue(question, answers) {
 
 function getEmailPreview(visibleQuestions, answers) {
   return visibleQuestions
-    .map((q) => `${q.title}
-${formatValue(q, answers)}`)
-    .join("
-
-");
+    .map((q) => `${q.title}\n${formatValue(q, answers)}`)
+    .join("\n\n");
 }
 
 export default function CSMDiscussionGuide() {
