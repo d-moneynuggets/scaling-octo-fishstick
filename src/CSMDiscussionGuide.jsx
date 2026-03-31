@@ -11,18 +11,6 @@ import {
   Target,
 } from "lucide-react";
 
-const styles = {
-  bg: "#F2F1F4",
-  card: "#FFFFFF",
-  ink: "#120F0D",
-  muted: "#60606B",
-  border: "#D9D8DE",
-  purple: "#6D39F8",
-  purpleSoft: "#ECE8FF",
-  lime: "#D6EA8A",
-  chipBg: "#FAFAFC",
-};
-
 const ROUTES = {
   CONTENT: ["finding_content", "starting_from_scratch", "version_control"],
   SME: ["sme_delays"],
@@ -108,7 +96,10 @@ const questions = [
     icon: Workflow,
     options: [
       { value: "formal_kickoff", label: "There is a formal intake or kickoff" },
-      { value: "informal_coordination", label: "There is an informal review and someone starts organizing" },
+      {
+        value: "informal_coordination",
+        label: "There is an informal review and someone starts organizing",
+      },
       { value: "one_person_drives", label: "One person usually picks it up and gets going" },
       { value: "varies", label: "It varies case by case" },
     ],
@@ -355,12 +346,37 @@ function getVisibleQuestions(answers) {
       continue;
     }
 
-    if (q.branch === "content" && friction.some((x) => ROUTES.CONTENT.includes(x))) visible.push(q);
-    if (q.branch === "sme" && friction.some((x) => ROUTES.SME.includes(x))) visible.push(q);
-    if (q.branch === "review" && friction.some((x) => ROUTES.REVIEW.includes(x))) visible.push(q);
-    if (q.branch === "compliance" && (friction.some((x) => ROUTES.COMPLIANCE.includes(x)) || ["federal", "grants", "mixed"].includes(workType))) visible.push(q);
-    if (q.branch === "production" && (friction.some((x) => ROUTES.PRODUCTION.includes(x)) || answers.top_outcomes?.includes("speed"))) visible.push(q);
-    if (q.branch === "rfi" && ["rfi_questionnaires", "mixed"].includes(workType)) visible.push(q);
+    if (q.branch === "content" && friction.some((x) => ROUTES.CONTENT.includes(x))) {
+      visible.push(q);
+    }
+
+    if (q.branch === "sme" && friction.some((x) => ROUTES.SME.includes(x))) {
+      visible.push(q);
+    }
+
+    if (q.branch === "review" && friction.some((x) => ROUTES.REVIEW.includes(x))) {
+      visible.push(q);
+    }
+
+    if (
+      q.branch === "compliance" &&
+      (friction.some((x) => ROUTES.COMPLIANCE.includes(x)) ||
+        ["federal", "grants", "mixed"].includes(workType))
+    ) {
+      visible.push(q);
+    }
+
+    if (
+      q.branch === "production" &&
+      (friction.some((x) => ROUTES.PRODUCTION.includes(x)) ||
+        (answers.top_outcomes || []).includes("speed"))
+    ) {
+      visible.push(q);
+    }
+
+    if (q.branch === "rfi" && ["rfi_questionnaires", "mixed"].includes(workType)) {
+      visible.push(q);
+    }
   }
 
   return visible;
@@ -368,9 +384,9 @@ function getVisibleQuestions(answers) {
 
 function getUrgentOptions(answers) {
   const selected = answers.friction_points || [];
-  const optionMap = Object.fromEntries(
-    (questions.find((q) => q.id === "friction_points")?.options || []).map((opt) => [opt.value, opt.label])
-  );
+  const sourceQuestion = questions.find((q) => q.id === "friction_points");
+  const optionMap = Object.fromEntries((sourceQuestion?.options || []).map((opt) => [opt.value, opt.label]));
+
   return selected
     .filter((x) => x !== "other")
     .map((value) => ({ value, label: optionMap[value] || value }));
@@ -378,10 +394,23 @@ function getUrgentOptions(answers) {
 
 function isAnswered(question, answers) {
   const value = answers[question.id];
-  if (question.type === "text") return question.optional ? true : Boolean(value?.trim());
-  if (question.type === "single") return Boolean(value);
-  if (question.type === "derived-single") return Boolean(value);
-  if (question.type === "multi") return Array.isArray(value) && value.length > 0;
+
+  if (question.type === "text") {
+    return question.optional ? true : Boolean(value?.trim());
+  }
+
+  if (question.type === "single") {
+    return Boolean(value);
+  }
+
+  if (question.type === "derived-single") {
+    return Boolean(value);
+  }
+
+  if (question.type === "multi") {
+    return Array.isArray(value) && value.length > 0;
+  }
+
   return false;
 }
 
@@ -400,11 +429,14 @@ function cardClass(selected) {
 
 function ProgressBar({ current, total }) {
   const pct = Math.max(6, Math.round((current / total) * 100));
+
   return (
     <div className="mb-8">
       <div className="mb-2 flex items-center justify-between text-xs font-medium text-[#60606B]">
         <span>Progress</span>
-        <span>{current} of {total}</span>
+        <span>
+          {current} of {total}
+        </span>
       </div>
       <div className="h-2 rounded-full bg-[#E7E7EC]">
         <div
@@ -442,7 +474,9 @@ function QuestionRenderer({ question, answers, setAnswer }) {
   const Icon = question.icon || Sparkles;
 
   const options = useMemo(() => {
-    if (question.type === "derived-single") return getUrgentOptions(answers);
+    if (question.type === "derived-single") {
+      return getUrgentOptions(answers);
+    }
     return question.options || [];
   }, [question, answers]);
 
@@ -455,7 +489,10 @@ function QuestionRenderer({ question, answers, setAnswer }) {
         Pre-Workshop Diagnostic
       </div>
 
-      <h2 className="text-2xl font-semibold tracking-tight text-[#120F0D] md:text-[2rem]">{question.title}</h2>
+      <h2 className="text-2xl font-semibold tracking-tight text-[#120F0D] md:text-[2rem]">
+        {question.title}
+      </h2>
+
       {question.helper && <p className="mt-3 text-sm leading-6 text-[#60606B]">{question.helper}</p>}
 
       {question.type === "text" && (
@@ -480,6 +517,7 @@ function QuestionRenderer({ question, answers, setAnswer }) {
               multi={false}
             />
           ))}
+
           {shouldShowOtherField(question, answers) && (
             <input
               value={answers[question.other.key] || ""}
@@ -496,6 +534,7 @@ function QuestionRenderer({ question, answers, setAnswer }) {
           {options.map((option) => {
             const selected = value.includes(option.value);
             const atLimit = question.max && value.length >= question.max && !selected;
+
             return (
               <button
                 key={option.value}
@@ -507,13 +546,17 @@ function QuestionRenderer({ question, answers, setAnswer }) {
                     : [...value, option.value];
                   setAnswer(question.id, next);
                 }}
-                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${atLimit ? "cursor-not-allowed opacity-45" : ""}`}
+                className={`w-full rounded-2xl border px-4 py-4 text-left transition ${cardClass(selected)} ${
+                  atLimit ? "cursor-not-allowed opacity-45" : ""
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="text-sm font-medium leading-6">{option.label}</div>
                   <div
                     className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                      selected ? "border-[#6D39F8] bg-[#6D39F8] text-white" : "border-[#C9C8D1] bg-white text-transparent"
+                      selected
+                        ? "border-[#6D39F8] bg-[#6D39F8] text-white"
+                        : "border-[#C9C8D1] bg-white text-transparent"
                     }`}
                   >
                     <Check className="h-3 w-3" />
@@ -522,6 +565,7 @@ function QuestionRenderer({ question, answers, setAnswer }) {
               </button>
             );
           })}
+
           {shouldShowOtherField(question, answers) && (
             <div className="md:col-span-2">
               <input
@@ -540,7 +584,10 @@ function QuestionRenderer({ question, answers, setAnswer }) {
 
 function formatValue(question, answers) {
   const value = answers[question.id];
-  if (!value || (Array.isArray(value) && value.length === 0)) return "—";
+
+  if (!value || (Array.isArray(value) && value.length === 0)) {
+    return "—";
+  }
 
   const optionMap = Object.fromEntries((question.options || []).map((opt) => [opt.value, opt.label]));
 
@@ -564,12 +611,7 @@ function formatValue(question, answers) {
 }
 
 function getEmailPreview(visibleQuestions, answers) {
-  return visibleQuestions
-    .map((q) => `${q.title}
-${formatValue(q, answers)}`)
-    .join("
-
-");
+  return visibleQuestions.map((q) => `${q.title}\n${formatValue(q, answers)}`).join("\n\n");
 }
 
 export default function CSMDiscussionGuide() {
@@ -579,7 +621,10 @@ export default function CSMDiscussionGuide() {
 
   const visibleQuestions = useMemo(() => getVisibleQuestions(answers), [answers]);
   const currentQuestion = visibleQuestions[currentIndex];
-  const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
+  const emailPreview = useMemo(
+    () => getEmailPreview(visibleQuestions, answers),
+    [visibleQuestions, answers]
+  );
 
   const setAnswer = (key, value) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -606,13 +651,20 @@ export default function CSMDiscussionGuide() {
             <Sparkles className="h-3.5 w-3.5" />
             Diagnostic summary ready
           </div>
+
           <h1 className="text-3xl font-semibold tracking-tight">Generate Diagnostic Summary</h1>
+
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
-            In the live app, this raw response set can be emailed directly. For now, this screen shows the exact structured content that would be sent.
+            In the live app, this raw response set can be emailed directly. For now, this screen
+            shows the exact structured content that would be sent.
           </p>
+
           <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
-            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
+            <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">
+              {emailPreview}
+            </pre>
           </div>
+
           <button
             type="button"
             onClick={() => {
@@ -636,17 +688,27 @@ export default function CSMDiscussionGuide() {
             <Sparkles className="h-3.5 w-3.5" />
             Pre-Workshop Diagnostic
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Help us tailor your session</h1>
+
+          <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">
+            Help us tailor your session
+          </h1>
+
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[#60606B] md:text-base">
-            This short diagnostic is designed to gather light, structured input before your session. Most responses are point-and-click, with optional type fields when you choose Other.
+            This short diagnostic is designed to gather light, structured input before your session.
+            Most responses are point-and-click, with optional type fields when you choose Other.
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr,320px]">
           <div>
             <ProgressBar current={currentIndex + 1} total={visibleQuestions.length} />
+
             {currentQuestion && (
-              <QuestionRenderer question={currentQuestion} answers={answers} setAnswer={setAnswer} />
+              <QuestionRenderer
+                question={currentQuestion}
+                answers={answers}
+                setAnswer={setAnswer}
+              />
             )}
 
             <div className="mt-5 flex items-center justify-between gap-3">
@@ -673,7 +735,9 @@ export default function CSMDiscussionGuide() {
           </div>
 
           <aside className="rounded-[28px] border border-[#D9D8DE] bg-white p-5 shadow-sm">
-            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Current response preview</div>
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+              Current response preview
+            </div>
             <div className="max-h-[520px] overflow-auto rounded-2xl border border-[#E7E7EC] bg-[#FAFAFC] p-4 text-sm leading-6 text-[#27272F]">
               {visibleQuestions.slice(0, currentIndex + 1).map((q) => (
                 <div key={q.id} className="mb-4 last:mb-0">
