@@ -759,25 +759,22 @@ export default function CSMDiscussionGuide() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] px-4 py-10">
       <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
+  @media print {
+    .no-print {
+      display: none !important;
+    }
 
-          body {
-            background: white !important;
-          }
+    body {
+      background: white !important;
+    }
 
-          .print-card {
-            box-shadow: none !important;
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-        }
-      `}</style>
-          body {
-            background: white !important;
-          }
+    .print-card {
+      box-shadow: none !important;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
+`}</style>
 
           .print-card {
             box-shadow: none !important;
