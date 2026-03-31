@@ -745,20 +745,17 @@ export default function CSMDiscussionGuide() {
   const handlePrint = () => {
   window.print();
   };
-  
   if (submitted) {
-    const handleCopy = async () => {
-      try {
-        await navigator.clipboard.writeText(emailPreview);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (e) {
-        console.error(e);
-      }
-    };
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(emailPreview);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-    return (
-      if (submitted) {
   return (
     <div className="min-h-screen bg-[#F5F5F7] px-4 py-10">
       <style>{`
@@ -767,6 +764,17 @@ export default function CSMDiscussionGuide() {
             display: none !important;
           }
 
+          body {
+            background: white !important;
+          }
+
+          .print-card {
+            box-shadow: none !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
           body {
             background: white !important;
           }
