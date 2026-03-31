@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -567,8 +567,129 @@ function formatValue(question, answers) {
 
 function getEmailPreview(visibleQuestions, answers) {
   return visibleQuestions
-    .map((q) => `${q.title}\n${formatValue(q, answers)}`)
-    .join("\n\n");
+    .map((q) => `${q.title}
+${formatValue(q, answers)}`)
+    .join("
+
+");
+}
+
+function getInstantInsights(answers) {
+  const insights = [];
+  const workType = answers.work_type || [];
+  const friction = answers.friction_points || [];
+  const outcomes = answers.top_outcomes || [];
+  const process = answers.process_structure || "";
+  const writingModel = answers.writing_model || "";
+  const readiness = answers.change_readiness || "";
+
+  if (process === "mostly_adhoc" || process === "depends") {
+    insights.push({
+      title: "Process clarity may need attention",
+      body: "The workflow appears to vary meaningfully by opportunity. A session that maps the current process and identifies where structure would help most is likely to add value quickly.",
+    });
+  }
+
+  if (friction.includes("finding_content") || friction.includes("starting_from_scratch") || friction.includes("version_control")) {
+    insights.push({
+      title: "Content reuse looks like a meaningful opportunity",
+      body: "There are signs the team may be spending more time than necessary finding, validating, or rebuilding source content.",
+    });
+  }
+
+  if (friction.includes("sme_delays") || writingModel === "smes_write_edit" || writingModel === "distributed") {
+    insights.push({
+      title: "SME collaboration may be shaping delivery speed",
+      body: "Subject matter expert input likely has a major impact on pace and consistency. Clarifying contribution methods and handoffs may reduce drag.",
+    });
+  }
+
+  if (friction.includes("review_comments") || friction.includes("ownership_coordination")) {
+    insights.push({
+      title: "Review flow may be creating avoidable friction",
+      body: "Review cycles, comment consolidation, or ownership visibility may be slowing the process more than necessary.",
+    });
+  }
+
+  if (workType.some((x) => ["federal", "grants"].includes(x)) || friction.includes("requirement_tracking") || outcomes.includes("compliance")) {
+    insights.push({
+      title: "Compliance support may be a priority area",
+      body: "Requirements tracking, compliance confidence, or structured validation appear important enough to emphasize in follow-up planning.",
+    });
+  }
+
+  if (outcomes.includes("speed") || friction.includes("formatting_final_assembly")) {
+    insights.push({
+      title: "Turnaround time likely matters",
+      body: "There may be an opportunity to reduce cycle time by improving drafting, handoff, or final production steps.",
+    });
+  }
+
+  if (readiness === "cautious" || readiness === "mixed" || readiness === "resistant") {
+    insights.push({
+      title: "Adoption may need a pragmatic approach",
+      body: "The team may benefit from practical, role-specific changes rather than a large process reset.",
+    });
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      title: "Your responses provide a strong starting point",
+      body: "The diagnostic suggests a relatively stable baseline, which will help focus the session on targeted improvements rather than broad discovery.",
+    });
+  }
+
+  return insights.slice(0, 3);
+}
+
+function getALPPreview(answers) {
+  const workType = answers.work_type || [];
+  const friction = answers.friction_points || [];
+  const outcomes = answers.top_outcomes || [];
+  const support = answers.support_needs || [];
+  const urgent = answers.urgent_issue || "";
+
+  const focusAreas = [];
+
+  if (friction.includes("finding_content") || friction.includes("starting_from_scratch") || friction.includes("version_control")) {
+    focusAreas.push("Content organization and reuse workflow");
+  }
+  if (friction.includes("sme_delays")) {
+    focusAreas.push("SME contribution model and handoff design");
+  }
+  if (friction.includes("review_comments") || friction.includes("ownership_coordination")) {
+    focusAreas.push("Review cycle structure and ownership clarity");
+  }
+  if (friction.includes("requirement_tracking") || workType.some((x) => ["federal", "grants"].includes(x))) {
+    focusAreas.push("Requirements tracking and compliance confidence");
+  }
+  if (friction.includes("formatting_final_assembly") || outcomes.includes("speed")) {
+    focusAreas.push("Production efficiency and turnaround reduction");
+  }
+  if (support.includes("training") || support.includes("platform_usage") || support.includes("prompts")) {
+    focusAreas.push("Targeted enablement, prompts, and role-based guidance");
+  }
+
+  const uniqueFocusAreas = [...new Set(focusAreas)].slice(0, 4);
+
+  const objectives = [
+    urgent ? `Address the most urgent issue identified: ${urgent.replaceAll("_", " ")}.` : "Prioritize the highest-friction area surfaced in the diagnostic.",
+    outcomes.includes("speed") ? "Reduce cycle time by identifying where work can be standardized or accelerated." : "Clarify where workflow improvements can reduce drag.",
+    outcomes.includes("quality") || outcomes.includes("compliance") ? "Improve confidence in quality, consistency, and response rigor." : "Increase consistency across the response process.",
+  ];
+
+  const recommendations = [
+    uniqueFocusAreas[0] ? `Start the session with a focused discussion on ${uniqueFocusAreas[0].toLowerCase()}.` : "Start with a focused discussion on the most time-consuming step in the current workflow.",
+    "Use one or two recent live examples to ground the discussion in real work.",
+    "Translate findings into a practical follow-up plan with specific owners or next steps.",
+  ];
+
+  return {
+    title: answers.company_name ? `Draft ALP for ${answers.company_name}` : "Draft Advanced Learning Plan",
+    objectives,
+    focusAreas: uniqueFocusAreas.length ? uniqueFocusAreas : ["Workflow mapping", "Role-based enablement", "Targeted process improvements"],
+    recommendations,
+  };
 }
 
 export default function CSMDiscussionGuide() {
@@ -577,10 +698,17 @@ export default function CSMDiscussionGuide() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [maxStepsSeen, setMaxStepsSeen] = useState(questions.length);
 
   const visibleQuestions = useMemo(() => getVisibleQuestions(answers), [answers]);
   const currentQuestion = visibleQuestions[currentIndex];
   const emailPreview = useMemo(() => getEmailPreview(visibleQuestions, answers), [visibleQuestions, answers]);
+  const instantInsights = useMemo(() => getInstantInsights(answers), [answers]);
+  const alpPreview = useMemo(() => getALPPreview(answers), [answers]);
+
+  useEffect(() => {
+    setMaxStepsSeen((prev) => Math.max(prev, visibleQuestions.length));
+  }, [visibleQuestions.length]);
 
   const setAnswer = (key, value) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -618,30 +746,76 @@ export default function CSMDiscussionGuide() {
             Diagnostic summary ready
           </div>
 
-          <h1 className="text-3xl font-semibold tracking-tight">Generate Diagnostic Summary</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready</h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
-            This version does not yet submit directly to SharePoint or email. Please copy the summary below and email it to your AutogenAI contact at <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
+            We will use this information to prepare a tailored session focused on your team’s priorities.
           </p>
 
           <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Instant insights</div>
+            <div className="space-y-3">
+              {instantInsights.map((insight, index) => (
+                <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+                  <div className="text-sm font-semibold text-[#120F0D]">{insight.title}</div>
+                  <div className="mt-1 text-sm leading-6 text-[#60606B]">{insight.body}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Draft ALP preview</div>
+            <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+              <div className="text-sm font-semibold text-[#120F0D]">{alpPreview.title}</div>
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Objectives</div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.objectives.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Suggested focus areas</div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.focusAreas.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+              <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Recommended next steps</div>
+              <ul className="mt-2 space-y-2 text-sm leading-6 text-[#60606B]">
+                {alpPreview.recommendations.map((item, index) => <li key={index}>• {item}</li>)}
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-2 text-sm font-semibold text-[#120F0D]">Next step</div>
+            <p className="text-sm leading-6 text-[#60606B]">
+              Please open a pre-filled email or copy the summary below and send it to <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>. This allows us to review your inputs and come prepared with specific recommendations.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">Diagnostic summary</div>
             <pre className="whitespace-pre-wrap text-sm leading-7 text-[#27272F]">{emailPreview}</pre>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
-            >
-              {copied ? "Copied" : "Copy summary"}
-            </button>
             <a
-              href={`mailto:${CONTACT_EMAIL}?subject=Pre-Workshop%20Diagnostic&body=${encodeURIComponent(emailPreview)}`}
-              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Pre-Workshop Diagnostic - ${answers.company_name || "New Client"}`)}&body=${encodeURIComponent(`Pre-Workshop Diagnostic Submission
+
+Company: ${answers.company_name || "N/A"}
+Contact: ${answers.contact_email || "N/A"}
+
+----------------------------------------
+
+${emailPreview}`)}`}
+              className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95"
             >
               Open email draft
             </a>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
+            >
+              {copied ? "Copied ✓" : "Copy summary"}
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -650,8 +824,17 @@ export default function CSMDiscussionGuide() {
               }}
               className="rounded-2xl border border-[#D9D8DE] bg-white px-5 py-3 text-sm font-semibold text-[#120F0D] transition hover:bg-[#FAFAFC]"
             >
-              Review responses again
+              Review responses
             </button>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-white p-5">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">What happens next</div>
+            <ul className="space-y-2 text-sm leading-6 text-[#60606B]">
+              <li>We review your responses and identify key opportunities.</li>
+              <li>We prepare a focused session tailored to your workflow.</li>
+              <li>We come ready with practical recommendations you can apply quickly.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -674,7 +857,7 @@ export default function CSMDiscussionGuide() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr,320px]">
           <div>
-            <ProgressBar current={currentIndex + 1} total={visibleQuestions.length} />
+            <ProgressBar current={currentIndex + 1} total={maxStepsSeen} />
             {currentQuestion && (
               <QuestionRenderer question={currentQuestion} answers={answers} setAnswer={setAnswer} />
             )}
