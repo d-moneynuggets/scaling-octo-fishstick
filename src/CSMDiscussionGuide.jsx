@@ -745,7 +745,7 @@ export default function CSMDiscussionGuide() {
   const handlePrint = () => {
   window.print();
   };
-  if (submitted) {
+ if (submitted) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(emailPreview);
@@ -756,25 +756,21 @@ export default function CSMDiscussionGuide() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5F7] px-4 py-10">
       <style>{`
-  @media print {
-    .no-print {
-      display: none !important;
-    }
+        @media print {
+          .no-print {
+            display: none !important;
+          }
 
-    body {
-      background: white !important;
-    }
-
-    .print-card {
-      box-shadow: none !important;
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-  }
-`}</style>
+          body {
+            background: white !important;
+          }
 
           .print-card {
             box-shadow: none !important;
@@ -785,25 +781,25 @@ export default function CSMDiscussionGuide() {
       `}</style>
 
       <div className="mx-auto max-w-4xl rounded-[30px] border border-[#D9D8DE] bg-white p-8 shadow-sm">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#ECE8FF] px-3 py-1.5 text-xs font-semibold text-[#6D39F8]">
-          <Sparkles className="h-3.5 w-3.5" />
-          Diagnostic summary ready
-        </div>
-
         <h1 className="text-3xl font-semibold tracking-tight">
           Your diagnostic{answers.company_name ? ` for ${answers.company_name}` : ""} is ready
         </h1>
 
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#60606B]">
+        <p className="mt-3 text-sm leading-6 text-[#60606B]">
           This summary captures your inputs and highlights key themes to support a focused follow-up discussion.
         </p>
 
-        {/* IMPORTANT: NOT STORED NOTE */}
+        {/* NOT STORED MESSAGE */}
         <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
-          <div className="mb-2 text-sm font-semibold text-[#120F0D]">Save and send your results</div>
+          <div className="mb-2 text-sm font-semibold text-[#120F0D]">
+            Save and send your results
+          </div>
 
           <p className="text-sm leading-6 text-[#60606B]">
-            Your responses are not stored in this tool. To keep a copy of your results, please save this page as a PDF and then open the pre-filled email draft below to send the summary to <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
+            Your responses are not stored in this tool. To keep a copy of your results,
+            please save this page as a PDF and then open the email draft below to send
+            the summary to{" "}
+            <span className="font-semibold text-[#120F0D]">{CONTACT_EMAIL}</span>.
           </p>
 
           <p className="mt-3 text-sm leading-6 text-[#60606B]">
@@ -813,25 +809,70 @@ export default function CSMDiscussionGuide() {
 
         {/* INSIGHTS */}
         <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">
             3 instant insights
           </div>
 
           <div className="space-y-3">
             {instantInsights.map((insight, index) => (
               <div key={index} className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
-                <div className="text-sm font-semibold text-[#120F0D]">
-                  {index + 1}. {insight.title}
-                </div>
-                <div className="mt-1 text-sm leading-6 text-[#60606B]">
-                  {insight.body}
-                </div>
+                <div className="text-sm font-semibold">{index + 1}. {insight.title}</div>
+                <div className="text-sm text-[#60606B] mt-1">{insight.body}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* ALP */}
+        <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B8B95]">
+            Draft Advanced Learning Plan
+          </div>
+
+          <div className="rounded-2xl border border-[#E7E7EC] bg-white p-4">
+            <div className="text-sm font-semibold">{alpPreview.title}</div>
+
+            <ul className="mt-3 space-y-2 text-sm text-[#60606B]">
+              {alpPreview.objectives.map((item, i) => (
+                <li key={i}>• {item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* BUTTONS */}
+        <div className="mt-6 flex gap-3 flex-wrap no-print">
+          <button
+            onClick={handlePrint}
+            className="rounded-2xl bg-[#6D39F8] px-5 py-3 text-white text-sm font-semibold"
+          >
+            Save as PDF
+          </button>
+
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Diagnostic Summary")}&body=${encodeURIComponent(emailPreview)}`}
+            className="rounded-2xl border border-[#D9D8DE] px-5 py-3 text-sm font-semibold"
+          >
+            Open email draft
+          </a>
+
+          <button
+            onClick={handleCopy}
+            className="rounded-2xl border border-[#D9D8DE] px-5 py-3 text-sm font-semibold"
+          >
+            {copied ? "Copied ✓" : "Copy summary"}
+          </button>
+        </div>
+
+        {/* RAW TEXT */}
+        <div className="mt-6 border rounded-3xl p-5 print-card">
+          <pre className="whitespace-pre-wrap text-sm">{emailPreview}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+        {/* Advanced Learning Plan */}
         <div className="mt-6 rounded-3xl border border-[#D9D8DE] bg-[#FAFAFC] p-5 print-card">
           <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8B8B95]">
             Draft Advanced Learning Plan
